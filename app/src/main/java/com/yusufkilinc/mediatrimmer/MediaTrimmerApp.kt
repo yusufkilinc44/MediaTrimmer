@@ -3,8 +3,6 @@ package com.yusufkilinc.mediatrimmer
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.arthenica.ffmpegkit.FFmpegKitConfig
-import com.arthenica.ffmpegkit.Level
 import com.yusufkilinc.mediatrimmer.core.util.NotificationUtils
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -18,11 +16,6 @@ class MediaTrimmerApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         notificationUtils.createNotificationChannels()
-
-        // Suppress FFmpegKit verbose logs in release builds
-        if (!BuildConfig.DEBUG) {
-            FFmpegKitConfig.setLogLevel(Level.AV_LOG_QUIET)
-        }
     }
 
     override val workManagerConfiguration: Configuration

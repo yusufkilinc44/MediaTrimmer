@@ -96,8 +96,8 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.session)
 
-    // FFmpegKit
-    implementation(libs.ffmpeg.kit)
+    // Media3 Transformer (replaces FFmpegKit)
+    implementation(libs.androidx.media3.transformer)
 
     // Room
     implementation(libs.androidx.room.runtime)

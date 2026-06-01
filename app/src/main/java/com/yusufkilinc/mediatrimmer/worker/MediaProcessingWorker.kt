@@ -10,7 +10,6 @@ import com.yusufkilinc.mediatrimmer.domain.model.ProcessingJob
 import com.yusufkilinc.mediatrimmer.domain.model.ProcessingState
 import com.yusufkilinc.mediatrimmer.domain.repository.HistoryRepository
 import com.yusufkilinc.mediatrimmer.domain.repository.MediaRepository
-import com.yusufkilinc.mediatrimmer.domain.usecase.FFmpegCommandBuilder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -51,10 +50,9 @@ class MediaProcessingWorker @AssistedInject constructor(
 
         return try {
             job.configs.forEachIndexed { index, config ->
-                val command = FFmpegCommandBuilder.build(config)
                 val overallOffset = index.toFloat() / job.configs.size
 
-                mediaRepository.executeFFmpegCommand(command, config.sourceDurationMs)
+                mediaRepository.executeTransformation(config)
                     .collect { state ->
                         when (state) {
                             is ProcessingState.Progress -> {

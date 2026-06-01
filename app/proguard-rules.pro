@@ -1,4 +1,4 @@
--keep class com.arthenica.ffmpegkit.** { *; }
+-keep class androidx.media3.transformer.** { *; }
 -keep class com.yusufkilinc.mediatrimmer.domain.model.** { *; }
 -keepattributes *Annotation*
 -keepclassmembers class * {

@@ -1,78 +1,127 @@
 package com.yusufkilinc.mediatrimmer.data.repository
 
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKitConfig
-import com.arthenica.ffmpegkit.FFprobeKit
-import com.arthenica.ffmpegkit.ReturnCode
+import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.net.Uri
+import android.os.Looper
+import androidx.media3.common.MediaItem
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
+import androidx.media3.transformer.Transformer
+import com.yusufkilinc.mediatrimmer.domain.model.OperationType
 import com.yusufkilinc.mediatrimmer.domain.model.ProcessingState
+import com.yusufkilinc.mediatrimmer.domain.model.TrimConfig
 import com.yusufkilinc.mediatrimmer.domain.repository.MediaRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MediaRepositoryImpl @Inject constructor() : MediaRepository {
+class MediaRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context
+) : MediaRepository {
 
-    override fun executeFFmpegCommand(
-        command: String,
-        totalDurationMs: Long
-    ): Flow<ProcessingState> = callbackFlow {
+    @Volatile private var activeTransformer: Transformer? = null
 
-        FFmpegKit.executeAsync(
-            command,
-            // ── Completion callback ───────────────────────────────────────
-            { session ->
-                val returnCode = session.returnCode
-                if (ReturnCode.isSuccess(returnCode)) {
-                    // Extract output path from the command (last quoted segment)
-                    val outputPath = extractOutputPath(command)
-                    trySend(ProcessingState.Complete(outputPath))
-                } else if (ReturnCode.isCancel(returnCode)) {
-                    trySend(ProcessingState.Cancelled)
-                } else {
-                    val logs = session.allLogsAsString ?: "Unknown error"
-                    trySend(ProcessingState.Error("FFmpeg failed (rc=${returnCode})", logs))
+    override fun executeTransformation(config: TrimConfig): Flow<ProcessingState> = callbackFlow {
+
+        var transformer: Transformer? = null
+
+        withContext(Dispatchers.Main) {
+            val listener = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    trySend(ProcessingState.Complete(config.outputPath))
+                    close()
                 }
-                close()
-            },
-            // ── Log callback (unused — statistics preferred) ──────────────
-            null,
-            // ── Statistics callback — most reliable progress source ────────
-            { statistics ->
-                if (totalDurationMs > 0 && statistics != null) {
-                    val processed = statistics.time.toLong()   // ms processed so far
-                    val percent = ((processed.toFloat() / totalDurationMs) * 100)
-                        .toInt().coerceIn(0, 99)
-                    trySend(ProcessingState.Progress(percent))
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    trySend(ProcessingState.Error(
+                        exportException.message ?: "Export failed (${exportException.errorCodeName})"
+                    ))
+                    close()
                 }
             }
-        )
+
+            transformer = Transformer.Builder(context)
+                .addListener(listener)
+                .build()
+                .also { activeTransformer = it }
+
+            val mediaItemBuilder = MediaItem.Builder()
+                .setUri(Uri.fromFile(File(config.sourceFilePath)))
+
+            if (config.operation != OperationType.CONVERT) {
+                mediaItemBuilder.setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(config.startMs)
+                        .setEndPositionMs(config.endMs)
+                        .build()
+                )
+            }
+
+            val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
+                .setRemoveVideo(config.operation == OperationType.EXTRACT_AUDIO)
+                .build()
+
+            transformer?.start(editedMediaItem, config.outputPath)
+        }
+
+        // Poll progress on main thread every 250 ms
+        launch(Dispatchers.Main) {
+            while (true) {
+                delay(250)
+                val holder = ProgressHolder()
+                val state = transformer?.getProgress(holder) ?: break
+                if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    trySend(ProcessingState.Progress(holder.progress))
+                }
+            }
+        }
 
         awaitClose {
-            // Cancel FFmpeg when the Flow collector is cancelled
-            FFmpegKit.cancel()
+            activeTransformer?.let { t ->
+                if (Looper.myLooper() == Looper.getMainLooper()) {
+                    t.cancel()
+                } else {
+                    android.os.Handler(Looper.getMainLooper()).post { t.cancel() }
+                }
+            }
+            activeTransformer = null
         }
     }
 
-    override suspend fun probeMediaDurationMs(path: String): Long {
-        return try {
-            val session = FFprobeKit.getMediaInformation(path)
-            val info = session.mediaInformation ?: return 0L
-            (info.duration.toDouble() * 1000).toLong()
+    override suspend fun probeMediaDurationMs(path: String): Long = withContext(Dispatchers.IO) {
+        try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(path)
+            val duration = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_DURATION
+            )?.toLong() ?: 0L
+            retriever.release()
+            duration
         } catch (_: Exception) {
             0L
         }
     }
 
     override fun cancelCurrentJob() {
-        FFmpegKit.cancel()
-    }
-
-    private fun extractOutputPath(command: String): String {
-        // The output path is always the last quoted argument in the command
-        val matches = Regex("\"([^\"]+)\"").findAll(command).toList()
-        return matches.lastOrNull()?.groupValues?.get(1) ?: ""
+        activeTransformer?.let { t ->
+            android.os.Handler(Looper.getMainLooper()).post { t.cancel() }
+        }
     }
 }
