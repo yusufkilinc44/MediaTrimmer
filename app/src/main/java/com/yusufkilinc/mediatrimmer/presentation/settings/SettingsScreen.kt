@@ -77,9 +77,8 @@ fun SettingsScreen(
                 SettingsSectionHeader(stringResource(R.string.settings_theme))
             }
             item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_theme)) },
-                    leadingContent = {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         val icon = when (settings.themeMode) {
                             ThemeMode.DARK   -> Icons.Default.DarkMode
                             ThemeMode.LIGHT  -> Icons.Default.LightMode
@@ -87,30 +86,40 @@ fun SettingsScreen(
                         }
                         Icon(icon, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary)
-                    },
-                    trailingContent = {
-                        SegmentedButton(
-                            options = listOf(
-                                stringResource(R.string.settings_theme_system),
-                                stringResource(R.string.settings_theme_light),
-                                stringResource(R.string.settings_theme_dark)
-                            ),
-                            selected = when (settings.themeMode) {
-                                ThemeMode.SYSTEM -> 0
-                                ThemeMode.LIGHT  -> 1
-                                ThemeMode.DARK   -> 2
-                            },
-                            onSelect = { idx ->
-                                val theme = when (idx) {
-                                    1 -> ThemeMode.LIGHT
-                                    2 -> ThemeMode.DARK
-                                    else -> ThemeMode.SYSTEM
-                                }
-                                viewModel.setTheme(theme)
-                            }
-                        )
+                        Spacer(Modifier.width(16.dp))
+                        Text(stringResource(R.string.settings_theme),
+                            style = MaterialTheme.typography.bodyLarge)
                     }
-                )
+                    Spacer(Modifier.height(12.dp))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        val options = listOf(
+                            stringResource(R.string.settings_theme_system),
+                            stringResource(R.string.settings_theme_light),
+                            stringResource(R.string.settings_theme_dark)
+                        )
+                        val selected = when (settings.themeMode) {
+                            ThemeMode.SYSTEM -> 0
+                            ThemeMode.LIGHT  -> 1
+                            ThemeMode.DARK   -> 2
+                        }
+                        options.forEachIndexed { index, label ->
+                            SegmentedButton(
+                                selected = selected == index,
+                                onClick = {
+                                    val theme = when (index) {
+                                        1 -> ThemeMode.LIGHT
+                                        2 -> ThemeMode.DARK
+                                        else -> ThemeMode.SYSTEM
+                                    }
+                                    viewModel.setTheme(theme)
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
             }
 
             item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }

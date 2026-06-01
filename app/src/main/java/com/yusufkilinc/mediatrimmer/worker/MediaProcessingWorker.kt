@@ -34,6 +34,17 @@ class MediaProcessingWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        return try {
+            doWorkInternal()
+        } catch (_: CancellationException) {
+            mediaRepository.cancelCurrentJob()
+            Result.failure(workDataOf(KEY_ERROR to "Cancelled"))
+        } catch (e: Exception) {
+            Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Processing failed")))
+        }
+    }
+
+    private suspend fun doWorkInternal(): Result {
         val jobJson = inputData.getString(KEY_JOB_JSON)
             ?: return Result.failure(workDataOf(KEY_ERROR to "Missing job data"))
 
@@ -43,91 +54,91 @@ class MediaProcessingWorker @AssistedInject constructor(
             return Result.failure(workDataOf(KEY_ERROR to "Invalid job JSON: ${e.message}"))
         }
 
-        setForeground(createForegroundInfo(0, "Processing…"))
+        // setForeground may fail on some Android versions — don't let it crash the worker
+        try {
+            setForeground(createForegroundInfo(0, "Processing…"))
+        } catch (_: Exception) {
+            // Continue without foreground notification
+        }
 
         var lastOutputPath = ""
         var errorMessage: String? = null
         val startTime = System.currentTimeMillis()
 
-        return try {
-            job.configs.forEachIndexed { index, config ->
-                if (errorMessage != null) return@forEachIndexed
+        job.configs.forEachIndexed { index, config ->
+            if (errorMessage != null) return@forEachIndexed
 
-                val overallOffset = index.toFloat() / job.configs.size
+            val overallOffset = index.toFloat() / job.configs.size
 
-                mediaRepository.executeTransformation(config)
-                    .collect { state ->
-                        when (state) {
-                            is ProcessingState.Progress -> {
-                                val overall = (overallOffset * 100 +
-                                    state.percent.toFloat() / job.configs.size).toInt()
+            mediaRepository.executeTransformation(config)
+                .collect { state ->
+                    when (state) {
+                        is ProcessingState.Progress -> {
+                            val overall = (overallOffset * 100 +
+                                state.percent.toFloat() / job.configs.size).toInt()
+                            try {
                                 setForeground(createForegroundInfo(overall,
                                     if (job.configs.size > 1) "File ${index + 1}/${job.configs.size}" else "Processing…"))
-                                setProgress(workDataOf(KEY_PROGRESS to overall))
-                            }
-
-                            is ProcessingState.Complete -> {
-                                lastOutputPath = state.outputPath
-                                val elapsed = System.currentTimeMillis() - startTime
-                                historyRepository.saveEntry(
-                                    ProcessingHistoryEntity(
-                                        id = config.sourceFilePath + "_" + config.startMs,
-                                        operationType = config.operation.name,
-                                        sourceFileName = config.sourceFileName,
-                                        outputFilePath = state.outputPath,
-                                        outputFormat = config.outputFormat,
-                                        startMs = config.startMs,
-                                        endMs = config.endMs,
-                                        processingDurationMs = elapsed,
-                                        outputFileSizeBytes = java.io.File(state.outputPath).length(),
-                                        status = "COMPLETED"
-                                    )
-                                )
-                            }
-
-                            is ProcessingState.Error -> {
-                                errorMessage = state.message
-                                historyRepository.saveEntry(
-                                    ProcessingHistoryEntity(
-                                        id = config.sourceFilePath + "_" + config.startMs + "_err",
-                                        operationType = config.operation.name,
-                                        sourceFileName = config.sourceFileName,
-                                        outputFilePath = "",
-                                        outputFormat = config.outputFormat,
-                                        startMs = config.startMs,
-                                        endMs = config.endMs,
-                                        status = "FAILED",
-                                        errorMessage = state.message
-                                    )
-                                )
-                            }
-
-                            else -> {}
+                            } catch (_: Exception) {}
+                            setProgress(workDataOf(KEY_PROGRESS to overall))
                         }
+
+                        is ProcessingState.Complete -> {
+                            lastOutputPath = state.outputPath
+                            val elapsed = System.currentTimeMillis() - startTime
+                            historyRepository.saveEntry(
+                                ProcessingHistoryEntity(
+                                    id = config.sourceFilePath + "_" + config.startMs,
+                                    operationType = config.operation.name,
+                                    sourceFileName = config.sourceFileName,
+                                    outputFilePath = state.outputPath,
+                                    outputFormat = config.outputFormat,
+                                    startMs = config.startMs,
+                                    endMs = config.endMs,
+                                    processingDurationMs = elapsed,
+                                    outputFileSizeBytes = java.io.File(state.outputPath).length(),
+                                    status = "COMPLETED"
+                                )
+                            )
+                        }
+
+                        is ProcessingState.Error -> {
+                            errorMessage = state.message
+                            historyRepository.saveEntry(
+                                ProcessingHistoryEntity(
+                                    id = config.sourceFilePath + "_" + config.startMs + "_err",
+                                    operationType = config.operation.name,
+                                    sourceFileName = config.sourceFileName,
+                                    outputFilePath = "",
+                                    outputFormat = config.outputFormat,
+                                    startMs = config.startMs,
+                                    endMs = config.endMs,
+                                    status = "FAILED",
+                                    errorMessage = state.message
+                                )
+                            )
+                        }
+
+                        else -> {}
                     }
-            }
-
-            if (errorMessage != null) {
-                return Result.failure(workDataOf(KEY_ERROR to errorMessage))
-            }
-
-            if (lastOutputPath.isNotEmpty()) {
-                val fileName = FileUtils.getFileName(lastOutputPath)
-                val title = if (job.configs.size > 1) "Batch complete" else "Processing complete"
-                notificationUtils.showCompletionNotification(
-                    outputPath = lastOutputPath,
-                    title = title,
-                    body = fileName
-                )
-            }
-
-            Result.success(workDataOf(KEY_RESULT_PATH to lastOutputPath))
-        } catch (_: CancellationException) {
-            mediaRepository.cancelCurrentJob()
-            Result.failure(workDataOf(KEY_ERROR to "Cancelled"))
-        } catch (e: Exception) {
-            Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Processing failed")))
+                }
         }
+
+        if (errorMessage != null) {
+            return Result.failure(workDataOf(KEY_ERROR to errorMessage))
+        }
+
+        if (lastOutputPath.isNotEmpty()) {
+            val fileName = FileUtils.getFileName(lastOutputPath)
+            val title = if (job.configs.size > 1) "Batch complete" else "Processing complete"
+            notificationUtils.showCompletionNotification(
+                outputPath = lastOutputPath,
+                title = title,
+                body = fileName
+            )
+        }
+
+        return Result.success(workDataOf(KEY_RESULT_PATH to lastOutputPath))
     }
 
     private fun createForegroundInfo(progress: Int, subtitle: String): ForegroundInfo {

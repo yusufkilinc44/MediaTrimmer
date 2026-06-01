@@ -87,10 +87,19 @@ class TrimViewModel @Inject constructor(
         val state = _uiState.value
         val mediaFile = state.mediaFile ?: return
 
+        // Media3 Transformer only supports MP4/M4A/WebM output containers.
+        // Force a compatible extension so the muxer doesn't fail.
+        val actualExtension = when {
+            state.outputFormat == MediaFormat.WEBM -> "webm"
+            state.operation == OperationType.EXTRACT_AUDIO -> "m4a"
+            mediaFile.isVideo -> "mp4"
+            else -> "m4a"
+        }
+
         val outputPath = FileUtils.generateOutputPath(
             context = context,
             sourceFileName = mediaFile.displayName,
-            extension = state.outputFormat.extension,
+            extension = actualExtension,
             suffix = when (state.operation) {
                 OperationType.TRIM          -> "trimmed"
                 OperationType.EXTRACT_AUDIO -> "audio"

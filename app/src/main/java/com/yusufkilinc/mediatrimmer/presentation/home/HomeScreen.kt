@@ -203,7 +203,8 @@ private fun UrlInputCard(
                 onValueChange = onUrlChange,
                 placeholder = { Text(stringResource(R.string.home_url_hint),
                     style = MaterialTheme.typography.bodySmall) },
-                singleLine = true,
+                singleLine = false,
+                maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = if (urlInput.isNotEmpty()) {{
                     IconButton(onClick = { onUrlChange("") }) {

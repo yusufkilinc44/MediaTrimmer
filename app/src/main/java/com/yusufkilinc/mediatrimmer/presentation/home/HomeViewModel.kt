@@ -68,6 +68,14 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(downloadError = "URL must start with http:// or https://") }
             return
         }
+        // Block streaming/video platform URLs — they don't serve direct media files
+        val streamingDomains = listOf("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com",
+            "twitch.tv", "tiktok.com", "instagram.com", "facebook.com", "twitter.com", "x.com")
+        val host = url.substringAfter("://").substringBefore("/").lowercase()
+        if (streamingDomains.any { host.contains(it) }) {
+            _uiState.update { it.copy(downloadError = "Streaming site links are not supported. Please use a direct media file URL (e.g. .mp3, .mp4)") }
+            return
+        }
 
         val workData = workDataOf(DownloadWorker.KEY_URL to url)
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
