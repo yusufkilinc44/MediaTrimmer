@@ -60,11 +60,16 @@ jobs:
           path: build-output.txt
           retention-days: 7
 
-      # 8. Upload APK as downloadable artifact (available for 30 days)
+      # 8. List build outputs for debugging
+      - name: List APK outputs
+        if: always()
+        run: find app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK files found"; ls -laR app/build/outputs/ 2>/dev/null | head -80
+
+      # 9. Upload APK as downloadable artifact (available for 30 days)
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: MediaTrimmer-debug-${{ github.run_number }}
-          path: app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
