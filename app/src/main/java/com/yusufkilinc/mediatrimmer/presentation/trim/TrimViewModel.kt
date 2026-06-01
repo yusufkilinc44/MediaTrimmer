@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yusufkilinc.mediatrimmer.core.util.FileUtils
+import com.yusufkilinc.mediatrimmer.data.local.db.entity.ProcessingHistoryEntity
 import com.yusufkilinc.mediatrimmer.data.repository.MediaRepositoryImpl
 import com.yusufkilinc.mediatrimmer.domain.model.*
+import com.yusufkilinc.mediatrimmer.domain.repository.HistoryRepository
 import com.yusufkilinc.mediatrimmer.domain.usecase.FFmpegCommandBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -13,6 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 
 data class TrimUiState(
@@ -30,6 +33,7 @@ data class TrimUiState(
 @HiltViewModel
 class TrimViewModel @Inject constructor(
     private val mediaRepository: MediaRepositoryImpl,
+    private val historyRepository: HistoryRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -85,13 +89,8 @@ class TrimViewModel @Inject constructor(
         val state = _uiState.value
         val mediaFile = state.mediaFile ?: return
 
-        // Media3 Transformer only supports MP4/M4A/WebM output containers
-        val actualExtension = when {
-            state.outputFormat == MediaFormat.WEBM -> "webm"
-            state.operation == OperationType.EXTRACT_AUDIO -> "m4a"
-            mediaFile.isVideo -> "mp4"
-            else -> "m4a"
-        }
+        // Use the actual selected output format extension
+        val actualExtension = state.outputFormat.extension
 
         val outputPath = FileUtils.generateOutputPath(
             context = context,
@@ -117,11 +116,29 @@ class TrimViewModel @Inject constructor(
 
         _uiState.update { it.copy(isProcessing = true, progress = 0, error = null, outputPath = null) }
 
-        // Run transformation directly in ViewModel — no WorkManager complexity
+        val startTime = System.currentTimeMillis()
+
         processingJob = viewModelScope.launch {
             try {
                 val result = mediaRepository.transformMedia(trimConfig)
                 _uiState.update { it.copy(isProcessing = false, outputPath = result) }
+
+                // Save to history
+                val outputFile = File(result)
+                historyRepository.saveEntry(
+                    ProcessingHistoryEntity(
+                        id = UUID.randomUUID().toString(),
+                        operationType = state.operation.name,
+                        sourceFileName = mediaFile.displayName,
+                        outputFilePath = result,
+                        outputFormat = state.outputFormat.displayName,
+                        startMs = state.startMs,
+                        endMs = state.endMs,
+                        processingDurationMs = System.currentTimeMillis() - startTime,
+                        outputFileSizeBytes = outputFile.length(),
+                        status = "COMPLETED"
+                    )
+                )
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(isProcessing = false, error = e.message ?: "Processing failed")

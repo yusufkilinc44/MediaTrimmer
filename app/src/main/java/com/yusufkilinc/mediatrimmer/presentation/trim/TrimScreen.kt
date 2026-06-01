@@ -1,6 +1,7 @@
 package com.yusufkilinc.mediatrimmer.presentation.trim
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yusufkilinc.mediatrimmer.R
@@ -26,6 +28,7 @@ import com.yusufkilinc.mediatrimmer.domain.model.OperationType
 import com.yusufkilinc.mediatrimmer.presentation.trim.components.FormatSelector
 import com.yusufkilinc.mediatrimmer.presentation.trim.components.TrimRangeSlider
 import com.yusufkilinc.mediatrimmer.presentation.trim.components.VideoPreview
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,17 +98,39 @@ fun TrimScreen(
 
             // ── File info chip row ────────────────────────────────────────────
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SuggestionChip(
+                AssistChip(
                     onClick = {},
-                    label = { Text(mediaFile.format?.displayName ?: "?") }
+                    label = { Text(mediaFile.format?.displayName ?: "?") },
+                    leadingIcon = {
+                        Icon(
+                            if (mediaFile.isVideo) Icons.Default.VideoFile else Icons.Default.AudioFile,
+                            null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        leadingIconContentColor = MaterialTheme.colorScheme.primary
+                    )
                 )
-                SuggestionChip(
+                AssistChip(
                     onClick = {},
-                    label = { Text(TimeUtils.formatDuration(mediaFile.durationMs)) }
+                    label = { Text(TimeUtils.formatDuration(mediaFile.durationMs)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Timer, null, modifier = Modifier.size(16.dp))
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        leadingIconContentColor = MaterialTheme.colorScheme.tertiary
+                    )
                 )
-                SuggestionChip(
+                AssistChip(
                     onClick = {},
-                    label = { Text(FileUtils.formatFileSize(mediaFile.sizeBytes)) }
+                    label = { Text(FileUtils.formatFileSize(mediaFile.sizeBytes)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Storage, null, modifier = Modifier.size(16.dp))
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        leadingIconContentColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
             }
 
@@ -116,11 +141,20 @@ fun TrimScreen(
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Select Range",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.ContentCut,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Select Range",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Spacer(Modifier.height(12.dp))
                     TrimRangeSlider(
                         durationMs = mediaFile.durationMs,
@@ -139,11 +173,20 @@ fun TrimScreen(
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.trim_operation),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.trim_operation),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Spacer(Modifier.height(12.dp))
 
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -192,11 +235,20 @@ fun TrimScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.trim_complete),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.trim_complete),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = FileUtils.getFileName(outputPath),
@@ -205,8 +257,45 @@ fun TrimScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Share button
+                            // Play button
                             Button(
+                                onClick = {
+                                    try {
+                                        val file = File(outputPath)
+                                        val contentUri: Uri = try {
+                                            FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                file
+                                            )
+                                        } catch (_: Exception) {
+                                            Uri.fromFile(file)
+                                        }
+                                        val ext = outputPath.substringAfterLast('.', "").lowercase()
+                                        val mime = when (ext) {
+                                            "mp4", "m4v" -> "video/mp4"
+                                            "webm" -> "video/webm"
+                                            "m4a" -> "audio/mp4"
+                                            else -> "*/*"
+                                        }
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(contentUri, mime)
+                                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                )
+                            ) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.trim_play))
+                            }
+                            // Share button
+                            FilledTonalButton(
                                 onClick = {
                                     context.startActivity(
                                         ShareUtils.createShareIntent(context, outputPath)
@@ -219,6 +308,8 @@ fun TrimScreen(
                                 Text(stringResource(R.string.trim_share))
                             }
                             OutlinedButton(onClick = { viewModel.clearResult() }) {
+                                Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text(stringResource(R.string.btn_close))
                             }
                         }

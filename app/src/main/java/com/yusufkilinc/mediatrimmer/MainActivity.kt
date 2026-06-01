@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         // Apply saved language before the activity inflates any resources
         val lang = runBlocking {
             newBase.dataStore.data
-                .map { prefs -> prefs[stringPreferencesKey("language")] ?: "en" }
+                .map { prefs -> prefs[stringPreferencesKey("language")] ?: "tr" }
                 .first()
         }
         val config = Configuration(newBase.resources.configuration).apply {

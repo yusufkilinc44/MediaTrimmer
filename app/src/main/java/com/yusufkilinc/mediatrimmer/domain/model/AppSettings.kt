@@ -1,8 +1,8 @@
 package com.yusufkilinc.mediatrimmer.domain.model
 
 data class AppSettings(
-    val language: String = "en",    // "en" | "tr"
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val language: String = "tr",    // "en" | "tr"
+    val themeMode: ThemeMode = ThemeMode.LIGHT
 )
 
 enum class ThemeMode {

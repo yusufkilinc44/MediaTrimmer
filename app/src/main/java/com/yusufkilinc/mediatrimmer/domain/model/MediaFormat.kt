@@ -131,27 +131,24 @@ enum class MediaFormat(
     );
 
     companion object {
-        val videoFormats: List<MediaFormat> get() = entries.filter { !it.isAudioOnly }
-        val audioFormats: List<MediaFormat> get() = entries.filter { it.isAudioOnly }
-
         /**
-         * Returns formats ordered: input format first, then MP3 (for audio),
-         * then the rest in enum order.
+         * Formats that Media3 Transformer can actually output.
+         * Transformer only supports MP4, M4A (audio-only MP4), and WebM containers.
          */
+        private val transformerVideoFormats = listOf(MP4, WEBM)
+        private val transformerAudioFormats = listOf(M4A, WEBM)
+
+        val videoFormats: List<MediaFormat> get() = transformerVideoFormats
+        val audioFormats: List<MediaFormat> get() = transformerAudioFormats
+
         fun orderedFormats(
             isVideo: Boolean,
             sourceFormat: MediaFormat?
         ): List<MediaFormat> {
             val base = if (isVideo) videoFormats else audioFormats
-            if (sourceFormat == null) return base
-            val prioritized = mutableListOf<MediaFormat>()
-            // 1) Same as input
-            if (base.contains(sourceFormat)) prioritized.add(sourceFormat)
-            // 2) MP3 if audio
-            if (!isVideo && sourceFormat != MP3 && base.contains(MP3)) prioritized.add(MP3)
-            // 3) Remaining
-            base.filter { it !in prioritized }.forEach { prioritized.add(it) }
-            return prioritized
+            if (sourceFormat == null || sourceFormat !in base) return base
+            // Put source format first
+            return listOf(sourceFormat) + base.filter { it != sourceFormat }
         }
 
         fun fromExtension(ext: String): MediaFormat? =

@@ -27,10 +27,10 @@ class AppSettingsDataStore @Inject constructor(
 
     val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
-            language  = prefs[KEY_LANGUAGE] ?: "en",
+            language  = prefs[KEY_LANGUAGE] ?: "tr",
             themeMode = runCatching {
-                ThemeMode.valueOf(prefs[KEY_THEME] ?: "SYSTEM")
-            }.getOrDefault(ThemeMode.SYSTEM)
+                ThemeMode.valueOf(prefs[KEY_THEME] ?: "LIGHT")
+            }.getOrDefault(ThemeMode.LIGHT)
         )
     }
 
