@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Uygulama -->
+    <string name="app_name">MediaTrimmer</string>
+    <string name="app_tagline">Kes, Çıkar ve Dönüştür</string>
+
+    <!-- Navigasyon -->
+    <string name="nav_home">Ana Sayfa</string>
+    <string name="nav_batch">Toplu İşlem</string>
+    <string name="nav_history">Geçmiş</string>
+    <string name="nav_settings">Ayarlar</string>
+
+    <!-- Ana Sayfa -->
+    <string name="home_pick_file">Dosya Seç</string>
+    <string name="home_or">veya</string>
+    <string name="home_enter_url">URL Gir</string>
+    <string name="home_url_hint">Doğrudan medya URL\'si yapıştırın (mp4, mp3, …)</string>
+    <string name="home_download_open">İndir ve Aç</string>
+    <string name="home_recent">Son İşlemler</string>
+    <string name="home_recent_empty">Henüz son işlem yok</string>
+    <string name="home_open_file">Başlamak için bir dosya açın</string>
+    <string name="home_supported_formats">Desteklenen: MP4, MKV, AVI, MOV, WebM, MP3, AAC, FLAC, WAV…</string>
+
+    <!-- Kesme Ekranı -->
+    <string name="trim_title">Medyayı Düzenle</string>
+    <string name="trim_start">Başlangıç</string>
+    <string name="trim_end">Bitiş</string>
+    <string name="trim_duration">Süre</string>
+    <string name="trim_operation">İşlem</string>
+    <string name="trim_op_trim">Kes</string>
+    <string name="trim_op_extract_audio">Ses Çıkar</string>
+    <string name="trim_op_convert">Dönüştür</string>
+    <string name="trim_output_format">Çıktı Formatı</string>
+    <string name="trim_process">İşle</string>
+    <string name="trim_processing">İşleniyor…</string>
+    <string name="trim_cancel">İptal</string>
+    <string name="trim_complete">Tamamlandı! Dosya kaydedildi.</string>
+    <string name="trim_share">Paylaş</string>
+    <string name="trim_open">Aç</string>
+    <string name="trim_error">Hata: %1$s</string>
+    <string name="trim_video_info">%1$s · %2$s · %3$s</string>
+
+    <!-- Toplu İşlem Ekranı -->
+    <string name="batch_title">Toplu İşlem</string>
+    <string name="batch_add_files">Dosya Ekle</string>
+    <string name="batch_add_url">URL Ekle</string>
+    <string name="batch_files_selected">%1$d dosya seçildi</string>
+    <string name="batch_output_format">Çıktı Formatı (tüm dosyalar)</string>
+    <string name="batch_operation">İşlem (tüm dosyalar)</string>
+    <string name="batch_process_all">Tümünü İşle</string>
+    <string name="batch_empty">Toplu işlem başlatmak için dosya ekleyin</string>
+    <string name="batch_remove">Kaldır</string>
+    <string name="batch_progress">İşleniyor %1$d/%2$d…</string>
+
+    <!-- Geçmiş Ekranı -->
+    <string name="history_title">Geçmiş</string>
+    <string name="history_empty">Henüz işlem geçmişi yok</string>
+    <string name="history_clear_all">Tümünü Temizle</string>
+    <string name="history_clear_confirm">Tüm geçmiş temizlensin mi?</string>
+    <string name="history_delete">Sil</string>
+    <string name="history_share">Paylaş</string>
+    <string name="history_open">Aç</string>
+    <string name="history_file_missing">Dosya artık mevcut değil</string>
+    <string name="history_status_completed">Tamamlandı</string>
+    <string name="history_status_failed">Başarısız</string>
+
+    <!-- Ayarlar Ekranı -->
+    <string name="settings_title">Ayarlar</string>
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_en">İngilizce</string>
+    <string name="settings_language_tr">Türkçe</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_system">Sistem</string>
+    <string name="settings_theme_light">Açık</string>
+    <string name="settings_theme_dark">Koyu</string>
+    <string name="settings_clear_history">Geçmişi Temizle</string>
+    <string name="settings_about">Hakkında</string>
+
+    <!-- Hakkında Ekranı -->
+    <string name="about_title">Hakkında</string>
+    <string name="about_version">Sürüm %1$s</string>
+    <string name="about_developer_label">Geliştirici</string>
+    <string name="about_developer_name">Yusuf Kılınç</string>
+    <string name="about_description">MediaTrimmer ile yerel dosyalardan veya URL\'den medya keserek, dönüştürerek ve ses çıkarabilirsiniz.</string>
+    <string name="about_powered_by">FFmpegKit ve Jetpack Compose ile geliştirildi</string>
+    <string name="about_copyright">© 2024 Yusuf Kılınç</string>
+
+    <!-- Butonlar -->
+    <string name="btn_cancel">İptal</string>
+    <string name="btn_ok">Tamam</string>
+    <string name="btn_confirm">Onayla</string>
+    <string name="btn_delete">Sil</string>
+    <string name="btn_close">Kapat</string>
+
+    <!-- Paylaş -->
+    <string name="share_output">Çıktı dosyasını paylaş</string>
+
+    <!-- Bildirimler -->
+    <string name="notif_channel_processing">İşleme</string>
+    <string name="notif_channel_processing_desc">Medya işlenirken ilerlemeyi gösterir</string>
+    <string name="notif_channel_download">İndirme</string>
+    <string name="notif_channel_download_desc">İndirme sırasında ilerlemeyi gösterir</string>
+    <string name="notif_channel_complete">Tamamlandı</string>
+    <string name="notif_processing_done">İşlem tamamlandı</string>
+
+    <!-- Hatalar -->
+    <string name="error_invalid_url">Geçersiz URL</string>
+    <string name="error_download_failed">İndirme başarısız: %1$s</string>
+    <string name="error_processing_failed">İşlem başarısız: %1$s</string>
+    <string name="error_file_not_found">Dosya bulunamadı</string>
+    <string name="error_permission_required">Depolama izni gerekli</string>
+    <string name="error_unsupported_format">Desteklenmeyen format</string>
+
+    <!-- Diğer -->
+    <string name="loading">Yükleniyor…</string>
+    <string name="downloading">İndiriliyor…</string>
+    <string name="unknown">Bilinmiyor</string>
+</resources>

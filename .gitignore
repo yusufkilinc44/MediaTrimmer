@@ -1,0 +1,50 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# App build outputs
+app/build/
+app/release/
+
+# Gradle
+.gradle/
+build/
+**/build/
+!src/**/build/
+
+# Gradle wrapper JAR (downloaded in CI)
+gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.aar
+
+# IDE
+/.idea/
+*.iws
+*.ipr
+out/
+.idea/
+
+# Signing keystores
+*.jks
+*.keystore
+
+# Logs
+*.log
+
+# Local env
+local.properties
