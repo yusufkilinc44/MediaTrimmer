@@ -38,6 +38,18 @@ class MediaRepositoryImpl @Inject constructor(
 
         var transformer: Transformer? = null
 
+        // Ensure output directory exists
+        val outputFile = File(config.outputPath)
+        outputFile.parentFile?.mkdirs()
+
+        // Verify source file exists
+        val sourceFile = File(config.sourceFilePath)
+        if (!sourceFile.exists()) {
+            trySend(ProcessingState.Error("Source file not found: ${sourceFile.name}"))
+            close()
+            return@callbackFlow
+        }
+
         withContext(Dispatchers.Main) {
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
@@ -50,35 +62,45 @@ class MediaRepositoryImpl @Inject constructor(
                     exportResult: ExportResult,
                     exportException: ExportException
                 ) {
-                    trySend(ProcessingState.Error(
-                        exportException.message ?: "Export failed (${exportException.errorCodeName})"
-                    ))
+                    val cause = exportException.cause?.message ?: ""
+                    val detail = exportException.message ?: "Export failed"
+                    val msg = if (cause.isNotEmpty() && cause != detail) {
+                        "$detail: $cause"
+                    } else {
+                        detail
+                    }
+                    trySend(ProcessingState.Error(msg))
                     close()
                 }
             }
 
-            transformer = Transformer.Builder(context)
-                .addListener(listener)
-                .build()
-                .also { activeTransformer = it }
+            try {
+                transformer = Transformer.Builder(context)
+                    .addListener(listener)
+                    .build()
+                    .also { activeTransformer = it }
 
-            val mediaItemBuilder = MediaItem.Builder()
-                .setUri(Uri.fromFile(File(config.sourceFilePath)))
+                val mediaItemBuilder = MediaItem.Builder()
+                    .setUri(Uri.fromFile(sourceFile))
 
-            if (config.operation != OperationType.CONVERT) {
-                mediaItemBuilder.setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(config.startMs)
-                        .setEndPositionMs(config.endMs)
-                        .build()
-                )
+                if (config.operation != OperationType.CONVERT) {
+                    mediaItemBuilder.setClippingConfiguration(
+                        MediaItem.ClippingConfiguration.Builder()
+                            .setStartPositionMs(config.startMs)
+                            .setEndPositionMs(config.endMs)
+                            .build()
+                    )
+                }
+
+                val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
+                    .setRemoveVideo(config.operation == OperationType.EXTRACT_AUDIO)
+                    .build()
+
+                transformer?.start(editedMediaItem, config.outputPath)
+            } catch (e: Exception) {
+                trySend(ProcessingState.Error("Failed to start: ${e.message}"))
+                close()
             }
-
-            val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
-                .setRemoveVideo(config.operation == OperationType.EXTRACT_AUDIO)
-                .build()
-
-            transformer?.start(editedMediaItem, config.outputPath)
         }
 
         // Poll progress on main thread every 250 ms

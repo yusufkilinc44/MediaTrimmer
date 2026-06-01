@@ -46,10 +46,13 @@ class MediaProcessingWorker @AssistedInject constructor(
         setForeground(createForegroundInfo(0, "Processing…"))
 
         var lastOutputPath = ""
+        var errorMessage: String? = null
         val startTime = System.currentTimeMillis()
 
         return try {
             job.configs.forEachIndexed { index, config ->
+                if (errorMessage != null) return@forEachIndexed
+
                 val overallOffset = index.toFloat() / job.configs.size
 
                 mediaRepository.executeTransformation(config)
@@ -83,6 +86,7 @@ class MediaProcessingWorker @AssistedInject constructor(
                             }
 
                             is ProcessingState.Error -> {
+                                errorMessage = state.message
                                 historyRepository.saveEntry(
                                     ProcessingHistoryEntity(
                                         id = config.sourceFilePath + "_" + config.startMs + "_err",
@@ -103,6 +107,10 @@ class MediaProcessingWorker @AssistedInject constructor(
                     }
             }
 
+            if (errorMessage != null) {
+                return Result.failure(workDataOf(KEY_ERROR to errorMessage))
+            }
+
             if (lastOutputPath.isNotEmpty()) {
                 val fileName = FileUtils.getFileName(lastOutputPath)
                 val title = if (job.configs.size > 1) "Batch complete" else "Processing complete"
@@ -118,7 +126,7 @@ class MediaProcessingWorker @AssistedInject constructor(
             mediaRepository.cancelCurrentJob()
             Result.failure(workDataOf(KEY_ERROR to "Cancelled"))
         } catch (e: Exception) {
-            Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Unknown error")))
+            Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Processing failed")))
         }
     }
 

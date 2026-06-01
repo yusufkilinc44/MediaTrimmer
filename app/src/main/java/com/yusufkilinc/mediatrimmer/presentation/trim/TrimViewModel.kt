@@ -163,6 +163,6 @@ class TrimViewModel @Inject constructor(
     fun availableOutputFormats(): List<MediaFormat> {
         val state = _uiState.value
         val isVideo = state.mediaFile?.isVideo ?: true
-        return FFmpegCommandBuilder.availableOutputFormats(isVideo, state.operation)
+        return FFmpegCommandBuilder.availableOutputFormats(isVideo, state.operation, state.mediaFile?.format)
     }
 }

@@ -28,6 +28,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { dataStore.setLanguage(lang) }
     }
 
+    suspend fun setLanguageAndWait(lang: String) {
+        dataStore.setLanguage(lang)
+    }
+
     fun setTheme(theme: ThemeMode) {
         viewModelScope.launch { dataStore.setTheme(theme) }
     }

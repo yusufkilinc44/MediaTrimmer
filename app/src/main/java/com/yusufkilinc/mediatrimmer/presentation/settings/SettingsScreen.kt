@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yusufkilinc.mediatrimmer.R
@@ -24,6 +25,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -58,8 +60,10 @@ fun SettingsScreen(
                             selected = if (settings.language == "en") 0 else 1,
                             onSelect = { idx ->
                                 val lang = if (idx == 0) "en" else "tr"
-                                viewModel.setLanguage(lang)
-                                onLanguageChanged()
+                                scope.launch {
+                                    viewModel.setLanguageAndWait(lang)
+                                    onLanguageChanged()
+                                }
                             }
                         )
                     }

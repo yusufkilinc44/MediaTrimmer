@@ -14,18 +14,24 @@ object FFmpegCommandBuilder {
         sourceFormat: MediaFormat?,
         operation: OperationType
     ): MediaFormat = when (operation) {
-        OperationType.TRIM          -> if (sourceFormat?.isAudioOnly == true) MediaFormat.M4A else MediaFormat.MP4
-        OperationType.EXTRACT_AUDIO -> MediaFormat.M4A
-        OperationType.CONVERT       -> if (sourceFormat?.isAudioOnly == true) MediaFormat.M4A else MediaFormat.MP4
+        OperationType.EXTRACT_AUDIO -> sourceFormat?.takeIf { it.isAudioOnly } ?: MediaFormat.M4A
+        else -> sourceFormat ?: MediaFormat.MP4
     }
 
     fun availableOutputFormats(
         sourceIsVideo: Boolean,
-        operation: OperationType
+        operation: OperationType,
+        sourceFormat: MediaFormat? = null
     ): List<MediaFormat> = when (operation) {
-        OperationType.TRIM          -> if (sourceIsVideo) MediaFormat.videoFormats else MediaFormat.audioFormats
-        OperationType.EXTRACT_AUDIO -> MediaFormat.audioFormats
-        OperationType.CONVERT       -> if (sourceIsVideo) MediaFormat.videoFormats + MediaFormat.audioFormats
-                                       else MediaFormat.audioFormats
+        OperationType.TRIM -> MediaFormat.orderedFormats(sourceIsVideo, sourceFormat)
+        OperationType.EXTRACT_AUDIO -> MediaFormat.orderedFormats(false, sourceFormat?.takeIf { it.isAudioOnly })
+        OperationType.CONVERT -> {
+            if (sourceIsVideo) {
+                MediaFormat.orderedFormats(true, sourceFormat) +
+                    MediaFormat.orderedFormats(false, null)
+            } else {
+                MediaFormat.orderedFormats(false, sourceFormat)
+            }
+        }
     }
 }
