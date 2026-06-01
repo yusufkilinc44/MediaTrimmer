@@ -1,5 +1,6 @@
 package com.yusufkilinc.mediatrimmer.presentation.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -121,9 +122,7 @@ fun SettingsScreen(
                         Icon(Icons.Default.DeleteOutline, contentDescription = null,
                             tint = MaterialTheme.colorScheme.error)
                     },
-                    modifier = androidx.compose.ui.Modifier.clickable(
-                        onClick = { showClearDialog = true }
-                    )
+                    modifier = Modifier.clickable { showClearDialog = true }
                 )
             }
 
@@ -140,7 +139,7 @@ fun SettingsScreen(
                     trailingContent = {
                         Icon(Icons.Default.ChevronRight, contentDescription = null)
                     },
-                    modifier = androidx.compose.ui.Modifier.clickable(onClick = onNavigateToAbout)
+                    modifier = Modifier.clickable { onNavigateToAbout() }
                 )
             }
         }
@@ -195,7 +194,3 @@ private fun SegmentedButton(
         }
     }
 }
-
-// Extension to make ListItem clickable
-private fun Modifier.clickable(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(onClick = onClick))
