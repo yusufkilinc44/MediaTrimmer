@@ -49,7 +49,16 @@ jobs:
 
       # 7. Build debug APK
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build-output.txt
+
+      # 7b. Upload build log on failure
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-output.txt
+          retention-days: 7
 
       # 8. Upload APK as downloadable artifact (available for 30 days)
       - name: Upload APK artifact
