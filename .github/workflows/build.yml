@@ -60,16 +60,36 @@ jobs:
           path: build-output.txt
           retention-days: 7
 
-      # 8. List build outputs for debugging
-      - name: List APK outputs
+      # 8. Find APK files and save listing
+      - name: Find APK files
         if: always()
-        run: find app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK files found"; ls -laR app/build/outputs/ 2>/dev/null | head -80
+        run: |
+          echo "=== find *.apk ===" > apk-listing.txt
+          find . -name "*.apk" -type f 2>/dev/null >> apk-listing.txt
+          echo "" >> apk-listing.txt
+          echo "=== app/build contents ===" >> apk-listing.txt
+          find app/build -type f -name "*.apk" -o -name "*.aab" 2>/dev/null >> apk-listing.txt
+          echo "" >> apk-listing.txt
+          echo "=== app/build/outputs tree ===" >> apk-listing.txt
+          ls -laR app/build/outputs/ 2>/dev/null >> apk-listing.txt || echo "app/build/outputs/ does not exist" >> apk-listing.txt
+          cat apk-listing.txt
 
-      # 9. Upload APK as downloadable artifact (available for 30 days)
+      # 9. Upload listing so we can see the output
+      - name: Upload APK listing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-listing
+          path: apk-listing.txt
+          retention-days: 7
+
+      # 10. Upload APK as downloadable artifact
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: MediaTrimmer-debug-${{ github.run_number }}
-          path: app/build/outputs/
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/**/*.apk
           retention-days: 30
           if-no-files-found: warn
