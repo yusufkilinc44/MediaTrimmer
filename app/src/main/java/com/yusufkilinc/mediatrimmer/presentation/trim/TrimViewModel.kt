@@ -3,17 +3,15 @@ package com.yusufkilinc.mediatrimmer.presentation.trim
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.*
 import com.yusufkilinc.mediatrimmer.core.util.FileUtils
+import com.yusufkilinc.mediatrimmer.data.repository.MediaRepositoryImpl
 import com.yusufkilinc.mediatrimmer.domain.model.*
-import com.yusufkilinc.mediatrimmer.domain.repository.MediaRepository
 import com.yusufkilinc.mediatrimmer.domain.usecase.FFmpegCommandBuilder
-import com.yusufkilinc.mediatrimmer.worker.MediaProcessingWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
 
@@ -31,13 +29,13 @@ data class TrimUiState(
 
 @HiltViewModel
 class TrimViewModel @Inject constructor(
-    private val mediaRepository: MediaRepository,
-    private val workManager: WorkManager,
+    private val mediaRepository: MediaRepositoryImpl,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrimUiState())
     val uiState: StateFlow<TrimUiState> = _uiState.asStateFlow()
+    private var processingJob: Job? = null
 
     fun loadMedia(filePath: String) {
         viewModelScope.launch {
@@ -87,8 +85,7 @@ class TrimViewModel @Inject constructor(
         val state = _uiState.value
         val mediaFile = state.mediaFile ?: return
 
-        // Media3 Transformer only supports MP4/M4A/WebM output containers.
-        // Force a compatible extension so the muxer doesn't fail.
+        // Media3 Transformer only supports MP4/M4A/WebM output containers
         val actualExtension = when {
             state.outputFormat == MediaFormat.WEBM -> "webm"
             state.operation == OperationType.EXTRACT_AUDIO -> "m4a"
@@ -118,49 +115,23 @@ class TrimViewModel @Inject constructor(
             operation        = state.operation
         )
 
-        val job = ProcessingJob(configs = listOf(trimConfig))
-
-        val workData = workDataOf(
-            MediaProcessingWorker.KEY_JOB_JSON to Json.encodeToString(ProcessingJob.serializer(), job)
-        )
-
-        val request = OneTimeWorkRequestBuilder<MediaProcessingWorker>()
-            .setInputData(workData)
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .addTag("trim_${job.id}")
-            .build()
-
-        workManager.enqueueUniqueWork(job.id, ExistingWorkPolicy.KEEP, request)
         _uiState.update { it.copy(isProcessing = true, progress = 0, error = null, outputPath = null) }
 
-        // Observe work progress
-        viewModelScope.launch {
-            workManager.getWorkInfosByTagFlow("trim_${job.id}").collect { infos ->
-                val info = infos.firstOrNull() ?: return@collect
-                when (info.state) {
-                    WorkInfo.State.RUNNING -> {
-                        val pct = info.progress.getInt(MediaProcessingWorker.KEY_PROGRESS, 0)
-                        _uiState.update { it.copy(progress = pct) }
-                    }
-                    WorkInfo.State.SUCCEEDED -> {
-                        val resultPath = info.outputData.getString(MediaProcessingWorker.KEY_RESULT_PATH)
-                        _uiState.update { it.copy(isProcessing = false, outputPath = resultPath) }
-                    }
-                    WorkInfo.State.FAILED -> {
-                        val err = info.outputData.getString(MediaProcessingWorker.KEY_ERROR)
-                        _uiState.update { it.copy(isProcessing = false, error = err ?: "Unknown error") }
-                    }
-                    WorkInfo.State.CANCELLED -> {
-                        _uiState.update { it.copy(isProcessing = false) }
-                    }
-                    else -> {}
+        // Run transformation directly in ViewModel — no WorkManager complexity
+        processingJob = viewModelScope.launch {
+            try {
+                val result = mediaRepository.transformMedia(trimConfig)
+                _uiState.update { it.copy(isProcessing = false, outputPath = result) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isProcessing = false, error = e.message ?: "Processing failed")
                 }
             }
         }
     }
 
     fun cancelProcessing() {
-        workManager.cancelAllWorkByTag("trim_${_uiState.value.mediaFile?.displayName}")
+        processingJob?.cancel()
         mediaRepository.cancelCurrentJob()
         _uiState.update { it.copy(isProcessing = false) }
     }

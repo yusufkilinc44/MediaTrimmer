@@ -22,10 +22,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @Singleton
 class MediaRepositoryImpl @Inject constructor(
@@ -34,21 +37,103 @@ class MediaRepositoryImpl @Inject constructor(
 
     @Volatile private var activeTransformer: Transformer? = null
 
-    override fun executeTransformation(config: TrimConfig): Flow<ProcessingState> = callbackFlow {
-
-        var transformer: Transformer? = null
-
+    /**
+     * Simple suspend function that runs Transformer and returns the output path.
+     * Throws on failure with a descriptive message.
+     */
+    suspend fun transformMedia(config: TrimConfig): String {
         // Ensure output directory exists
-        val outputFile = File(config.outputPath)
-        outputFile.parentFile?.mkdirs()
+        File(config.outputPath).parentFile?.mkdirs()
 
-        // Verify source file exists
+        // Verify source file
+        val sourceFile = File(config.sourceFilePath)
+        if (!sourceFile.exists()) {
+            throw IllegalStateException("Source file not found: ${sourceFile.name}")
+        }
+        if (sourceFile.length() == 0L) {
+            throw IllegalStateException("Source file is empty: ${sourceFile.name}")
+        }
+
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { cont ->
+                try {
+                    val transformer = Transformer.Builder(context)
+                        .addListener(object : Transformer.Listener {
+                            override fun onCompleted(
+                                composition: Composition,
+                                exportResult: ExportResult
+                            ) {
+                                activeTransformer = null
+                                if (cont.isActive) cont.resume(config.outputPath)
+                            }
+
+                            override fun onError(
+                                composition: Composition,
+                                exportResult: ExportResult,
+                                exportException: ExportException
+                            ) {
+                                activeTransformer = null
+                                if (cont.isActive) {
+                                    val cause = exportException.cause?.message ?: ""
+                                    val detail = exportException.message ?: "Export failed"
+                                    val msg = if (cause.isNotEmpty() && cause != detail) {
+                                        "$detail — $cause"
+                                    } else {
+                                        detail
+                                    }
+                                    cont.resumeWithException(RuntimeException(msg))
+                                }
+                            }
+                        })
+                        .build()
+
+                    activeTransformer = transformer
+
+                    val mediaItemBuilder = MediaItem.Builder()
+                        .setUri(Uri.fromFile(sourceFile))
+
+                    if (config.operation != OperationType.CONVERT) {
+                        mediaItemBuilder.setClippingConfiguration(
+                            MediaItem.ClippingConfiguration.Builder()
+                                .setStartPositionMs(config.startMs)
+                                .setEndPositionMs(config.endMs)
+                                .build()
+                        )
+                    }
+
+                    val editedMediaItem = EditedMediaItem.Builder(mediaItemBuilder.build())
+                        .setRemoveVideo(config.operation == OperationType.EXTRACT_AUDIO)
+                        .build()
+
+                    transformer.start(editedMediaItem, config.outputPath)
+
+                    cont.invokeOnCancellation {
+                        transformer.cancel()
+                        activeTransformer = null
+                    }
+                } catch (e: Exception) {
+                    if (cont.isActive) {
+                        cont.resumeWithException(
+                            RuntimeException("Failed to start transformer: ${e.message}", e)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    override fun executeTransformation(config: TrimConfig): Flow<ProcessingState> = callbackFlow {
+        // Ensure output directory exists
+        File(config.outputPath).parentFile?.mkdirs()
+
         val sourceFile = File(config.sourceFilePath)
         if (!sourceFile.exists()) {
             trySend(ProcessingState.Error("Source file not found: ${sourceFile.name}"))
             close()
             return@callbackFlow
         }
+
+        var transformer: Transformer? = null
 
         withContext(Dispatchers.Main) {
             val listener = object : Transformer.Listener {
@@ -65,7 +150,7 @@ class MediaRepositoryImpl @Inject constructor(
                     val cause = exportException.cause?.message ?: ""
                     val detail = exportException.message ?: "Export failed"
                     val msg = if (cause.isNotEmpty() && cause != detail) {
-                        "$detail: $cause"
+                        "$detail — $cause"
                     } else {
                         detail
                     }
@@ -103,7 +188,6 @@ class MediaRepositoryImpl @Inject constructor(
             }
         }
 
-        // Poll progress on main thread every 250 ms
         launch(Dispatchers.Main) {
             while (true) {
                 delay(250)
