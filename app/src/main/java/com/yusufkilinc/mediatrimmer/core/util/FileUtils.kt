@@ -155,7 +155,41 @@ object FileUtils {
         if (idx >= 0) {
             return path.substring(idx + filesMarker.length)
         }
-        return path
+        // For cache paths, just show the filename
+        if (path.contains("/cache/")) {
+            return File(path).name
+        }
+        return File(path).name
+    }
+
+    fun friendlyDirPath(path: String): String {
+        if (path.startsWith("content://")) {
+            try {
+                val uri = Uri.parse(path)
+                val docId = DocumentsContract.getDocumentId(uri)
+                val parts = docId.split(":")
+                if (parts.size == 2) {
+                    val fullPath = parts[1]
+                    val lastSlash = fullPath.lastIndexOf('/')
+                    return if (lastSlash > 0) fullPath.substring(0, lastSlash) else fullPath
+                }
+            } catch (_: Exception) {}
+            return path
+        }
+        val prefix = "/storage/emulated/0/"
+        if (path.startsWith(prefix)) {
+            val relative = path.removePrefix(prefix)
+            val lastSlash = relative.lastIndexOf('/')
+            return if (lastSlash > 0) relative.substring(0, lastSlash) else relative
+        }
+        val filesMarker = "/files/"
+        val idx = path.lastIndexOf(filesMarker)
+        if (idx >= 0) {
+            val relative = path.substring(idx + filesMarker.length)
+            val lastSlash = relative.lastIndexOf('/')
+            return if (lastSlash > 0) relative.substring(0, lastSlash) else relative
+        }
+        return File(path).parent?.let { File(it).name } ?: ""
     }
 
     /**

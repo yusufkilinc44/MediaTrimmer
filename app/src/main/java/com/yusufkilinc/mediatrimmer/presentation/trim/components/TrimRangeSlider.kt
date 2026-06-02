@@ -8,11 +8,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.yusufkilinc.mediatrimmer.R
 import com.yusufkilinc.mediatrimmer.core.util.TimeUtils
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -34,7 +36,6 @@ fun TrimRangeSlider(
     val minGapMs = 500L
     val focusManager = LocalFocusManager.current
 
-    // Sync from external state only when not dragging
     LaunchedEffect(startMs, endMs) {
         if (!isDragging) {
             sliderStart = startMs.toFloat()
@@ -42,13 +43,11 @@ fun TrimRangeSlider(
         }
     }
 
-    // Start time fields
     var startHH by remember { mutableStateOf("") }
     var startMM by remember { mutableStateOf("") }
     var startSS by remember { mutableStateOf("") }
     var startCS by remember { mutableStateOf("") }
 
-    // End time fields
     var endHH by remember { mutableStateOf("") }
     var endMM by remember { mutableStateOf("") }
     var endSS by remember { mutableStateOf("") }
@@ -76,19 +75,13 @@ fun TrimRangeSlider(
         endCS = String.format(Locale.US, "%02d", c)
     }
 
-    // Initialize fields
     LaunchedEffect(Unit) {
         updateStartFields(startMs)
         updateEndFields(endMs)
     }
 
-    // Update fields when slider values change (from drag or external)
-    LaunchedEffect(sliderStart) {
-        updateStartFields(sliderStart.toLong())
-    }
-    LaunchedEffect(sliderEnd) {
-        updateEndFields(sliderEnd.toLong())
-    }
+    LaunchedEffect(sliderStart) { updateStartFields(sliderStart.toLong()) }
+    LaunchedEffect(sliderEnd) { updateEndFields(sliderEnd.toLong()) }
 
     fun parseFieldsToMs(hh: String, mm: String, ss: String, cs: String): Long? {
         val h = hh.toLongOrNull() ?: return null
@@ -121,35 +114,30 @@ fun TrimRangeSlider(
         focusManager.clearFocus()
     }
 
+    val labelHour = stringResource(R.string.time_hour)
+    val labelMin = stringResource(R.string.time_min)
+    val labelSec = stringResource(R.string.time_sec)
+    val labelMs = stringResource(R.string.time_ms)
+
     Column(modifier = modifier) {
-        // Start time label + fields
+        // ── Start time ──
         Text(
-            "Start",
+            stringResource(R.string.trim_start),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TimeField(value = startHH, onValueChange = { startHH = it }, label = "HH", modifier = Modifier.weight(1f),
-                onDone = { commitStartFields() })
-            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = startMM, onValueChange = { startMM = it }, label = "MM", modifier = Modifier.weight(1f),
-                onDone = { commitStartFields() })
-            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = startSS, onValueChange = { startSS = it }, label = "SS", modifier = Modifier.weight(1f),
-                onDone = { commitStartFields() })
-            Text(".", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = startCS, onValueChange = { startCS = it }, label = "ms", modifier = Modifier.weight(1f),
-                onDone = { commitStartFields() })
-        }
+        TimeFieldRow(
+            hh = startHH, mm = startMM, ss = startSS, cs = startCS,
+            onHH = { startHH = it }, onMM = { startMM = it },
+            onSS = { startSS = it }, onCS = { startCS = it },
+            labelHour = labelHour, labelMin = labelMin,
+            labelSec = labelSec, labelMs = labelMs,
+            onDone = { commitStartFields() }
+        )
 
         Spacer(Modifier.height(8.dp))
 
-        // Duration display
         Text(
             text = "→  ${TimeUtils.formatDuration(sliderEnd.toLong() - sliderStart.toLong())}  →",
             style = MaterialTheme.typography.labelSmall,
@@ -160,34 +148,25 @@ fun TrimRangeSlider(
 
         Spacer(Modifier.height(8.dp))
 
-        // End time label + fields
+        // ── End time ──
         Text(
-            "End",
+            stringResource(R.string.trim_end),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TimeField(value = endHH, onValueChange = { endHH = it }, label = "HH", modifier = Modifier.weight(1f),
-                onDone = { commitEndFields() })
-            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = endMM, onValueChange = { endMM = it }, label = "MM", modifier = Modifier.weight(1f),
-                onDone = { commitEndFields() })
-            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = endSS, onValueChange = { endSS = it }, label = "SS", modifier = Modifier.weight(1f),
-                onDone = { commitEndFields() })
-            Text(".", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TimeField(value = endCS, onValueChange = { endCS = it }, label = "ms", modifier = Modifier.weight(1f),
-                onDone = { commitEndFields() })
-        }
+        TimeFieldRow(
+            hh = endHH, mm = endMM, ss = endSS, cs = endCS,
+            onHH = { endHH = it }, onMM = { endMM = it },
+            onSS = { endSS = it }, onCS = { endCS = it },
+            labelHour = labelHour, labelMin = labelMin,
+            labelSec = labelSec, labelMs = labelMs,
+            onDone = { commitEndFields() }
+        )
 
         Spacer(Modifier.height(12.dp))
 
-        // Range slider
+        // ── Range slider ──
         RangeSlider(
             value = sliderStart..sliderEnd,
             onValueChange = { range ->
@@ -212,7 +191,6 @@ fun TrimRangeSlider(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Total duration indicator
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -228,6 +206,37 @@ fun TrimRangeSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
+    }
+}
+
+@Composable
+private fun TimeFieldRow(
+    hh: String, mm: String, ss: String, cs: String,
+    onHH: (String) -> Unit, onMM: (String) -> Unit,
+    onSS: (String) -> Unit, onCS: (String) -> Unit,
+    labelHour: String, labelMin: String,
+    labelSec: String, labelMs: String,
+    onDone: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TimeField(value = hh, onValueChange = onHH, label = labelHour,
+            modifier = Modifier.weight(1f), onDone = onDone)
+        Text(":", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TimeField(value = mm, onValueChange = onMM, label = labelMin,
+            modifier = Modifier.weight(1f), onDone = onDone)
+        Text(":", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TimeField(value = ss, onValueChange = onSS, label = labelSec,
+            modifier = Modifier.weight(1f), onDone = onDone)
+        Text(".", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TimeField(value = cs, onValueChange = onCS, label = labelMs,
+            modifier = Modifier.weight(1f), onDone = onDone)
     }
 }
 

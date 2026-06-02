@@ -130,6 +130,12 @@
     <string name="history_source">Source</string>
     <string name="history_processed_in">Processed in</string>
 
+    <!-- Time field labels -->
+    <string name="time_hour">Hour</string>
+    <string name="time_min">Min</string>
+    <string name="time_sec">Sec</string>
+    <string name="time_ms">ms</string>
+
     <!-- Misc -->
     <string name="loading">Loading…</string>
     <string name="downloading">Downloading…</string>

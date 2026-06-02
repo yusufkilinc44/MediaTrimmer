@@ -46,9 +46,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Handle "Open with" intents
+        // Handle "Open with" and "Share to" intents
         incomingMediaUri = when (intent?.action) {
             android.content.Intent.ACTION_VIEW -> intent.data
+            android.content.Intent.ACTION_SEND -> {
+                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM) as? Uri
+            }
             else -> null
         }
 

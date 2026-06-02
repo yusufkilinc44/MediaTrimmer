@@ -100,13 +100,8 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
                 val hasVideo = state.items.any { it.isVideo }
                 val hasAudio = state.items.any { !it.isVideo }
                 val sourceIsVideo = hasVideo && !hasAudio
-                val sourceIsAudio = hasAudio && !hasVideo
-                val formats = when {
-                    state.operation == OperationType.EXTRACT_AUDIO -> MediaFormat.audioFormats
-                    sourceIsAudio -> MediaFormat.audioFormats
-                    sourceIsVideo -> MediaFormat.videoFormats
-                    else -> MediaFormat.videoFormats + MediaFormat.audioFormats
-                }
+                val formats = com.yusufkilinc.mediatrimmer.domain.usecase.FFmpegCommandBuilder
+                    .availableOutputFormats(sourceIsVideo, state.operation)
                 FormatSelector(
                     label = stringResource(R.string.batch_output_format),
                     formats = formats,

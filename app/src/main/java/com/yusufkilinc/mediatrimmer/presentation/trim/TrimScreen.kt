@@ -376,8 +376,8 @@ private fun ResultScreen(
         }
     }
 
-    val isVideo = !mediaFile.mimeType.startsWith("audio") &&
-            state.operation != OperationType.EXTRACT_AUDIO
+    val isOutputVideo = state.operation != OperationType.EXTRACT_AUDIO &&
+            !state.outputFormat.isAudioOnly
 
     val player = remember(contentUri) {
         ExoPlayer.Builder(context).build().apply {
@@ -443,7 +443,7 @@ private fun ResultScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            if (isVideo) {
+            if (isOutputVideo) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
@@ -456,7 +456,6 @@ private fun ResultScreen(
                         .aspectRatio(16f / 9f)
                 )
             } else {
-                // Audio player controls
                 Column(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -485,13 +484,14 @@ private fun ResultScreen(
         }
 
         // ── INPUT file info ──────────────────────────────────────
+        val sourceFriendlyDir = FileUtils.friendlyDirPath(state.originalSourcePath.ifEmpty { mediaFile.resolvedPath })
         FileInfoCard(
             title = stringResource(R.string.result_input),
             icon = Icons.Default.FileOpen,
             cardColor = MaterialTheme.colorScheme.surfaceContainer,
             onCardColor = MaterialTheme.colorScheme.onSurface,
             fileName = mediaFile.displayName,
-            filePath = FileUtils.friendlyPath(mediaFile.resolvedPath),
+            filePath = sourceFriendlyDir,
             fileType = mediaFile.format?.displayName ?: "?",
             fileSize = FileUtils.formatFileSize(mediaFile.sizeBytes),
             duration = TimeUtils.formatDuration(mediaFile.durationMs)
@@ -504,7 +504,7 @@ private fun ResultScreen(
             cardColor = MaterialTheme.colorScheme.secondaryContainer,
             onCardColor = MaterialTheme.colorScheme.onSecondaryContainer,
             fileName = outputFileName,
-            filePath = FileUtils.friendlyPath(outputPath),
+            filePath = FileUtils.friendlyDirPath(outputPath),
             fileType = state.outputFormat.displayName,
             fileSize = FileUtils.formatFileSize(outputFileSize),
             duration = if (state.operation == OperationType.CONVERT) {

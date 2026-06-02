@@ -29,7 +29,8 @@ data class TrimUiState(
     val progress: Int = 0,
     val outputPath: String? = null,
     val processingDurationMs: Long = 0L,
-    val error: String? = null
+    val error: String? = null,
+    val originalSourcePath: String = ""
 )
 
 @HiltViewModel
@@ -68,7 +69,8 @@ class TrimViewModel @Inject constructor(
                     endMs = durationMs.coerceAtLeast(1L),
                     outputFormat = FFmpegCommandBuilder.suggestOutputFormat(
                         mediaFile.format, OperationType.TRIM
-                    )
+                    ),
+                    originalSourcePath = filePath
                 )
             }
         }

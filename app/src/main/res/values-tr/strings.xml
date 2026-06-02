@@ -130,6 +130,12 @@
     <string name="history_source">Kaynak</string>
     <string name="history_processed_in">İşlem süresi</string>
 
+    <!-- Zaman alanı etiketleri -->
+    <string name="time_hour">Saat</string>
+    <string name="time_min">Dk</string>
+    <string name="time_sec">Sn</string>
+    <string name="time_ms">ms</string>
+
     <!-- Diğer -->
     <string name="loading">Yükleniyor…</string>
     <string name="downloading">İndiriliyor…</string>
