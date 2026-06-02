@@ -8,12 +8,15 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yusufkilinc.mediatrimmer.R
+import com.yusufkilinc.mediatrimmer.core.util.FileUtils
 import com.yusufkilinc.mediatrimmer.domain.model.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,9 +26,11 @@ fun SettingsScreen(
     onLanguageChanged: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val outputDir = remember { FileUtils.getOutputDirectory(context).absolutePath }
 
     Scaffold(
         topBar = {
@@ -120,6 +125,31 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                 }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
+
+            // ── Output Directory ──────────────────────────────────────────────
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_output_dir))
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_output_dir)) },
+                    supportingContent = {
+                        Text(
+                            outputDir,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingContent = {
+                        Icon(Icons.Default.Folder, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary)
+                    }
+                )
             }
 
             item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }

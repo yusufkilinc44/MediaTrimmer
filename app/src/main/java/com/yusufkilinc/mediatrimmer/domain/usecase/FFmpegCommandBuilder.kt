@@ -13,17 +13,8 @@ object FFmpegCommandBuilder {
         sourceFormat: MediaFormat?,
         operation: OperationType
     ): MediaFormat = when (operation) {
-        OperationType.EXTRACT_AUDIO -> MediaFormat.M4A
-        else -> {
-            when {
-                sourceFormat != null && sourceFormat in MediaFormat.videoFormats -> sourceFormat
-                sourceFormat != null && sourceFormat in MediaFormat.audioFormats -> sourceFormat
-                // Source format not Transformer-supported — pick best default
-                sourceFormat != null && sourceFormat.isAudioOnly -> MediaFormat.M4A
-                sourceFormat != null -> MediaFormat.MP4
-                else -> MediaFormat.MP4
-            }
-        }
+        OperationType.EXTRACT_AUDIO -> sourceFormat?.takeIf { it.isAudioOnly } ?: MediaFormat.MP3
+        else -> sourceFormat ?: MediaFormat.MP4
     }
 
     fun availableOutputFormats(

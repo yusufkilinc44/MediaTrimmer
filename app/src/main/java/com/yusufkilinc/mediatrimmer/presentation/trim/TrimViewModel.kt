@@ -27,6 +27,7 @@ data class TrimUiState(
     val isProcessing: Boolean = false,
     val progress: Int = 0,
     val outputPath: String? = null,
+    val processingDurationMs: Long = 0L,
     val error: String? = null
 )
 
@@ -121,7 +122,8 @@ class TrimViewModel @Inject constructor(
         processingJob = viewModelScope.launch {
             try {
                 val result = mediaRepository.transformMedia(trimConfig)
-                _uiState.update { it.copy(isProcessing = false, outputPath = result) }
+                val elapsed = System.currentTimeMillis() - startTime
+                _uiState.update { it.copy(isProcessing = false, outputPath = result, processingDurationMs = elapsed) }
 
                 // Save to history
                 val outputFile = File(result)

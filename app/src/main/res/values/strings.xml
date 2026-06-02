@@ -74,6 +74,7 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_clear_history">Clear History</string>
+    <string name="settings_output_dir">Output Directory</string>
     <string name="settings_about">About</string>
 
     <!-- About Screen -->

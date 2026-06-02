@@ -74,6 +74,7 @@
     <string name="settings_theme_light">Açık</string>
     <string name="settings_theme_dark">Koyu</string>
     <string name="settings_clear_history">Geçmişi Temizle</string>
+    <string name="settings_output_dir">Çıktı Dizini</string>
     <string name="settings_about">Hakkında</string>
 
     <!-- Hakkında Ekranı -->
