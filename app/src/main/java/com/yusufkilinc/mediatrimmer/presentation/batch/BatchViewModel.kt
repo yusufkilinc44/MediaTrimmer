@@ -26,7 +26,7 @@ data class BatchItem(
 
 data class BatchUiState(
     val items: List<BatchItem> = emptyList(),
-    val operation: OperationType = OperationType.TRIM,
+    val operation: OperationType = OperationType.CONVERT,
     val outputFormat: MediaFormat = MediaFormat.MP4,
     val isProcessing: Boolean = false,
     val progress: Int = 0,

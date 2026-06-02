@@ -5,10 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,17 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yusufkilinc.mediatrimmer.R
-import com.yusufkilinc.mediatrimmer.core.util.FileUtils
-import com.yusufkilinc.mediatrimmer.data.local.db.entity.ProcessingHistoryEntity
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,17 +59,26 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.ContentCut,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
                         )
-                        Text(
-                            stringResource(R.string.app_tagline),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                stringResource(R.string.app_tagline),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -203,34 +203,6 @@ fun HomeScreen(
                 }
             }
 
-            // ── Recent history ─────────────────────────────────────────────
-            if (state.recentHistory.isNotEmpty()) {
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.History,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.home_recent),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                items(state.recentHistory, key = { it.id }) { entry ->
-                    RecentHistoryCard(entry = entry, onOpen = {
-                        if (File(entry.outputFilePath).exists()) {
-                            onFileReady(entry.outputFilePath)
-                        }
-                    })
-                }
-            }
-
             // Spacer for bottom nav
             item { Spacer(Modifier.height(16.dp)) }
         }
@@ -328,68 +300,5 @@ private fun UrlInputCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RecentHistoryCard(
-    entry: ProcessingHistoryEntity,
-    onOpen: () -> Unit
-) {
-    val fileExists = remember(entry.outputFilePath) { File(entry.outputFilePath).exists() }
-
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        ListItem(
-            headlineContent = {
-                Text(
-                    FileUtils.getFileName(entry.outputFilePath.ifEmpty { entry.sourceFileName }),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            },
-            supportingContent = {
-                Text(
-                    SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(entry.createdAt)) +
-                            " · " + entry.outputFormat,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingContent = {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = if (fileExists) MaterialTheme.colorScheme.tertiaryContainer
-                    else MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (fileExists) Icons.Default.MusicVideo else Icons.Default.BrokenImage,
-                            contentDescription = null,
-                            tint = if (fileExists) MaterialTheme.colorScheme.onTertiaryContainer
-                            else MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            },
-            trailingContent = if (fileExists) {
-                {
-                    IconButton(onClick = onOpen) {
-                        Icon(
-                            Icons.Default.OpenInNew, contentDescription = "Open",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            } else null,
-            modifier = Modifier
-                .clickable(enabled = fileExists, onClick = onOpen)
-                .fillMaxWidth()
-        )
     }
 }

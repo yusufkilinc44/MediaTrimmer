@@ -117,6 +117,9 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // DocumentFile (SAF support)
+    implementation(libs.androidx.documentfile)
+
     // OkHttp
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)

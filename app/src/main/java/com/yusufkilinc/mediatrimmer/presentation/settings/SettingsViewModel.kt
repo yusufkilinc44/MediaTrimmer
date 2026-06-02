@@ -35,4 +35,8 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(theme: ThemeMode) {
         viewModelScope.launch { dataStore.setTheme(theme) }
     }
+
+    fun setOutputDirUri(uri: String?) {
+        viewModelScope.launch { dataStore.setOutputDirUri(uri) }
+    }
 }

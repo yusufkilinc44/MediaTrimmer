@@ -14,6 +14,9 @@ data class ProcessingHistoryEntity(
     val endMs: Long = 0L,
     val processingDurationMs: Long = 0L,
     val outputFileSizeBytes: Long = 0L,
+    val sourceFileSizeBytes: Long = 0L,
+    val sourceDurationMs: Long = 0L,
+    val outputFileName: String = "",
     val status: String,                 // "COMPLETED" | "FAILED"
     val errorMessage: String? = null,
     val createdAt: Long = System.currentTimeMillis()

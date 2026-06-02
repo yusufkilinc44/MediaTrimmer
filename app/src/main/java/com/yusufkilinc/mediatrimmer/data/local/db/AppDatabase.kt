@@ -7,7 +7,7 @@ import com.yusufkilinc.mediatrimmer.data.local.db.entity.ProcessingHistoryEntity
 
 @Database(
     entities = [ProcessingHistoryEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

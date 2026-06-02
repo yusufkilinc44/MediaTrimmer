@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -145,13 +146,17 @@ fun VideoPreview(
                 Icon(Icons.Default.SkipNext, contentDescription = "End",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = "${TimeUtils.formatTimecode(currentPositionMs)} / ${TimeUtils.formatTimecode(endMs - startMs)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
+
+        // Time display - separate centered row
+        Text(
+            text = "${TimeUtils.formatTimecode(currentPositionMs)} / ${TimeUtils.formatTimecode(endMs - startMs)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            textAlign = TextAlign.Center
+        )
     }
 }

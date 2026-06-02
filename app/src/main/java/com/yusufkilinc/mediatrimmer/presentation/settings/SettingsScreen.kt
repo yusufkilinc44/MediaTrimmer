@@ -1,5 +1,8 @@
 package com.yusufkilinc.mediatrimmer.presentation.settings
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,7 +33,19 @@ fun SettingsScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val outputDir = remember { FileUtils.getOutputDirectory(context).absolutePath }
+    val defaultOutputDir = remember { FileUtils.getOutputDirectory(context).absolutePath }
+
+    // SAF directory picker
+    val dirPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            // Take persistent permission
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(it, flags)
+            viewModel.setOutputDirUri(it.toString())
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -134,21 +149,44 @@ fun SettingsScreen(
                 SettingsSectionHeader(stringResource(R.string.settings_output_dir))
             }
             item {
+                val currentDir = settings.outputDirUri?.let { FileUtils.friendlyDirFromTreeUri(it) }
+                    ?: FileUtils.friendlyPath(defaultOutputDir)
+
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_output_dir)) },
                     supportingContent = {
-                        Text(
-                            outputDir,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column {
+                            Text(
+                                currentDir,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                stringResource(R.string.settings_change_output_dir),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     },
                     leadingContent = {
                         Icon(Icons.Default.Folder, contentDescription = null,
                             tint = MaterialTheme.colorScheme.tertiary)
-                    }
+                    },
+                    trailingContent = {
+                        if (settings.outputDirUri != null) {
+                            IconButton(onClick = { viewModel.setOutputDirUri(null) }) {
+                                Icon(Icons.Default.RestartAlt,
+                                    contentDescription = stringResource(R.string.settings_output_dir_reset),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null)
+                        }
+                    },
+                    modifier = Modifier.clickable { dirPicker.launch(null) }
                 )
             }
 

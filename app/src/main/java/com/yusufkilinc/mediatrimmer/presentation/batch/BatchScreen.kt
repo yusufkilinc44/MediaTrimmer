@@ -77,14 +77,14 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Operation selector
+                // Operation selector (no TRIM in batch mode)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(OperationType.TRIM, OperationType.EXTRACT_AUDIO, OperationType.CONVERT)
-                        .forEachIndexed { index, op ->
+                    val ops = listOf(OperationType.EXTRACT_AUDIO, OperationType.CONVERT)
+                    ops.forEachIndexed { index, op ->
                             SegmentedButton(
                                 selected = state.operation == op,
                                 onClick = { viewModel.setOperation(op) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = ops.size),
                                 label = {
                                     Text(when (op) {
                                         OperationType.TRIM          -> stringResource(R.string.trim_op_trim)

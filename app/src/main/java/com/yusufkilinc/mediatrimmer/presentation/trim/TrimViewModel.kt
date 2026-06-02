@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yusufkilinc.mediatrimmer.core.util.FileUtils
+import com.yusufkilinc.mediatrimmer.data.local.datastore.AppSettingsDataStore
 import com.yusufkilinc.mediatrimmer.data.local.db.entity.ProcessingHistoryEntity
 import com.yusufkilinc.mediatrimmer.data.repository.MediaRepositoryImpl
 import com.yusufkilinc.mediatrimmer.domain.model.*
@@ -35,6 +36,7 @@ data class TrimUiState(
 class TrimViewModel @Inject constructor(
     private val mediaRepository: MediaRepositoryImpl,
     private val historyRepository: HistoryRepository,
+    private val settingsDataStore: AppSettingsDataStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -90,7 +92,6 @@ class TrimViewModel @Inject constructor(
         val state = _uiState.value
         val mediaFile = state.mediaFile ?: return
 
-        // Use the actual selected output format extension
         val actualExtension = state.outputFormat.extension
 
         val outputPath = FileUtils.generateOutputPath(
@@ -123,21 +124,42 @@ class TrimViewModel @Inject constructor(
             try {
                 val result = mediaRepository.transformMedia(trimConfig)
                 val elapsed = System.currentTimeMillis() - startTime
-                _uiState.update { it.copy(isProcessing = false, outputPath = result, processingDurationMs = elapsed) }
+
+                // Check for custom output directory
+                var finalOutputPath = result
+                val customDirUri = settingsDataStore.getOutputDirUri()
+                if (customDirUri != null) {
+                    val safUri = FileUtils.copyToSafDirectory(context, result, customDirUri)
+                    if (safUri != null) {
+                        File(result).delete()
+                        finalOutputPath = safUri.toString()
+                    }
+                }
+
+                _uiState.update { it.copy(isProcessing = false, outputPath = finalOutputPath, processingDurationMs = elapsed) }
 
                 // Save to history
                 val outputFile = File(result)
+                val outputFileSize = if (finalOutputPath.startsWith("content://")) {
+                    FileUtils.getFileSizeFromUri(context, android.net.Uri.parse(finalOutputPath))
+                } else if (outputFile.exists()) {
+                    outputFile.length()
+                } else 0L
+
                 historyRepository.saveEntry(
                     ProcessingHistoryEntity(
                         id = UUID.randomUUID().toString(),
                         operationType = state.operation.name,
                         sourceFileName = mediaFile.displayName,
-                        outputFilePath = result,
+                        outputFilePath = finalOutputPath,
                         outputFormat = state.outputFormat.displayName,
                         startMs = state.startMs,
                         endMs = state.endMs,
-                        processingDurationMs = System.currentTimeMillis() - startTime,
-                        outputFileSizeBytes = outputFile.length(),
+                        processingDurationMs = elapsed,
+                        outputFileSizeBytes = outputFileSize,
+                        sourceFileSizeBytes = mediaFile.sizeBytes,
+                        sourceDurationMs = mediaFile.durationMs,
+                        outputFileName = FileUtils.getFileName(finalOutputPath),
                         status = "COMPLETED"
                     )
                 )

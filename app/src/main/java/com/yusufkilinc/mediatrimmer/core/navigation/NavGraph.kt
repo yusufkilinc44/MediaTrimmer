@@ -47,7 +47,13 @@ fun MediaTrimmerNavGraph(
 
             TrimScreen(
                 filePath = filePath,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

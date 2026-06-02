@@ -116,6 +116,20 @@
     <string name="error_permission_required">Depolama izni gerekli</string>
     <string name="error_unsupported_format">Desteklenmeyen format</string>
 
+    <!-- Sonuç Ekranı -->
+    <string name="trim_select_range">Aralık Seç</string>
+    <string name="result_processing_time">İşlem Süresi</string>
+    <string name="result_input">Girdi</string>
+    <string name="result_output">Çıktı</string>
+
+    <!-- Ayarlar ek -->
+    <string name="settings_change_output_dir">Değiştirmek için dokunun</string>
+    <string name="settings_output_dir_reset">Varsayılana Sıfırla</string>
+
+    <!-- Geçmiş ek -->
+    <string name="history_source">Kaynak</string>
+    <string name="history_processed_in">İşlem süresi</string>
+
     <!-- Diğer -->
     <string name="loading">Yükleniyor…</string>
     <string name="downloading">İndiriliyor…</string>
