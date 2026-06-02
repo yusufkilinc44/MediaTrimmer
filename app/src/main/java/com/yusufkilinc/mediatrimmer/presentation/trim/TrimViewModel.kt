@@ -45,22 +45,33 @@ class TrimViewModel @Inject constructor(
     val uiState: StateFlow<TrimUiState> = _uiState.asStateFlow()
     private var processingJob: Job? = null
 
-    fun loadMedia(filePath: String) {
+    fun loadMedia(filePath: String, originalUri: String = "") {
         viewModelScope.launch {
             val durationMs = mediaRepository.probeMediaDurationMs(filePath)
             val file = File(filePath)
             val isVideo = filePath.substringAfterLast('.', "").lowercase() in
                     setOf("mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "3gp", "ts", "m4v")
 
+            // Resolve friendly display name from original URI if available
+            val displayName = if (originalUri.isNotEmpty()) {
+                try {
+                    val uri = android.net.Uri.parse(originalUri)
+                    FileUtils.getDisplayNameFromUri(context, uri) ?: file.name
+                } catch (_: Exception) { file.name }
+            } else file.name
+
             val mediaFile = MediaFile(
-                uri = android.net.Uri.fromFile(file),
+                uri = if (originalUri.isNotEmpty()) android.net.Uri.parse(originalUri) else android.net.Uri.fromFile(file),
                 resolvedPath = filePath,
-                displayName = file.name,
+                displayName = displayName,
                 mimeType = if (isVideo) "video/*" else "audio/*",
                 sizeBytes = file.length(),
                 durationMs = durationMs.coerceAtLeast(1L),
                 isVideo = isVideo
             )
+
+            // Use original URI for friendly path, fall back to file path
+            val sourcePath = originalUri.ifEmpty { filePath }
 
             _uiState.update {
                 it.copy(
@@ -70,7 +81,7 @@ class TrimViewModel @Inject constructor(
                     outputFormat = FFmpegCommandBuilder.suggestOutputFormat(
                         mediaFile.format, OperationType.TRIM
                     ),
-                    originalSourcePath = filePath
+                    originalSourcePath = sourcePath
                 )
             }
         }
@@ -162,6 +173,8 @@ class TrimViewModel @Inject constructor(
                         sourceFileSizeBytes = mediaFile.sizeBytes,
                         sourceDurationMs = mediaFile.durationMs,
                         outputFileName = FileUtils.getFileName(finalOutputPath),
+                        sourceFolder = FileUtils.friendlyDirPath(state.originalSourcePath.ifEmpty { mediaFile.resolvedPath }),
+                        outputFolder = FileUtils.friendlyDirPath(finalOutputPath),
                         status = "COMPLETED"
                     )
                 )

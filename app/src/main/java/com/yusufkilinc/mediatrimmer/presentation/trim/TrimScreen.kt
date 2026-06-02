@@ -2,8 +2,10 @@ package com.yusufkilinc.mediatrimmer.presentation.trim
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,10 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -25,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.yusufkilinc.mediatrimmer.R
 import com.yusufkilinc.mediatrimmer.core.util.FileUtils
@@ -40,6 +47,7 @@ import java.io.File
 @Composable
 fun TrimScreen(
     filePath: String,
+    originalUri: String = "",
     onBack: () -> Unit,
     onNavigateHome: () -> Unit = onBack,
     viewModel: TrimViewModel = hiltViewModel()
@@ -49,7 +57,7 @@ fun TrimScreen(
     var playerPositionMs by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(filePath) {
-        viewModel.loadMedia(filePath)
+        viewModel.loadMedia(filePath, originalUri)
     }
 
     Scaffold(
@@ -389,6 +397,22 @@ private fun ResultScreen(
         onDispose { player.release() }
     }
 
+    var resultIsPlaying by remember { mutableStateOf(false) }
+    var resultPositionMs by remember { mutableLongStateOf(0L) }
+    var resultDurationMs by remember { mutableLongStateOf(1L) }
+    var resultIsSeeking by remember { mutableStateOf(false) }
+
+    LaunchedEffect(player) {
+        while (true) {
+            if (!resultIsSeeking) {
+                resultPositionMs = player.currentPosition
+                if (player.duration > 0) resultDurationMs = player.duration
+            }
+            resultIsPlaying = player.isPlaying
+            kotlinx.coroutines.delay(100L)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -419,7 +443,7 @@ private fun ResultScreen(
             color = MaterialTheme.colorScheme.primary
         )
 
-        // Processing time badge with label
+        // Processing time badge
         AssistChip(
             onClick = {},
             label = {
@@ -438,49 +462,101 @@ private fun ResultScreen(
             )
         )
 
-        // In-app player
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            if (isOutputVideo) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            this.player = player
-                            useController = true
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                )
-            } else {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.MusicNote, null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                this.player = player
-                                useController = true
-                                controllerShowTimeoutMs = 0
-                                showController()
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                    )
+        // In-app player — matching editor style
+        if (isOutputVideo) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        this.player = player
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black)
+            )
+        } else {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                color = MaterialTheme.colorScheme.surfaceContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.MusicNote, null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = TimeUtils.formatTimecode(resultPositionMs),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
+        }
+
+        // Seekbar
+        Slider(
+            value = resultPositionMs.toFloat().coerceIn(0f, resultDurationMs.toFloat()),
+            onValueChange = { v ->
+                resultIsSeeking = true
+                resultPositionMs = v.toLong()
+            },
+            onValueChangeFinished = {
+                player.seekTo(resultPositionMs)
+                resultIsSeeking = false
+            },
+            valueRange = 0f..resultDurationMs.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+            ),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+        )
+
+        // Play/Pause + time
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledIconButton(
+                onClick = {
+                    if (resultIsPlaying) {
+                        player.pause()
+                    } else {
+                        if (resultPositionMs >= resultDurationMs - 200) player.seekTo(0)
+                        player.play()
+                    }
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = if (resultIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = null
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "${TimeUtils.formatTimecode(resultPositionMs)} / ${TimeUtils.formatTimecode(resultDurationMs)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
         }
 
         // ── INPUT file info ──────────────────────────────────────

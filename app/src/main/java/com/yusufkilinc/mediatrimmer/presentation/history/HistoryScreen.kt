@@ -203,6 +203,13 @@ private fun HistoryItem(
                 value = entry.sourceFileName
             )
 
+            if (entry.sourceFolder.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
+                Row(modifier = Modifier.padding(start = 24.dp)) {
+                    DetailChip(Icons.Default.Folder, entry.sourceFolder)
+                }
+            }
+
             if (entry.sourceFileSizeBytes > 0 || entry.sourceDurationMs > 0) {
                 Spacer(Modifier.height(2.dp))
                 Row(modifier = Modifier.padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -224,6 +231,13 @@ private fun HistoryItem(
                 label = stringResource(R.string.result_output),
                 value = entry.outputFileName.ifEmpty { FileUtils.getFileName(entry.outputFilePath) }
             )
+
+            if (entry.outputFolder.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
+                Row(modifier = Modifier.padding(start = 24.dp)) {
+                    DetailChip(Icons.Default.Folder, entry.outputFolder)
+                }
+            }
 
             Spacer(Modifier.height(2.dp))
             Row(modifier = Modifier.padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

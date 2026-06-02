@@ -29,23 +29,31 @@ fun MediaTrimmerNavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 incomingUri = incomingUri,
-                onFileReady = { path ->
-                    navController.navigate(Screen.Trim.createRoute(path))
+                onFileReady = { path, origUri ->
+                    navController.navigate(Screen.Trim.createRoute(path, origUri))
                 }
             )
         }
 
         composable(
             route = Screen.Trim.route,
-            arguments = listOf(navArgument("encodedPath") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("encodedPath") { type = NavType.StringType },
+                navArgument("origUri") { type = NavType.StringType; defaultValue = "" }
+            )
         ) { backStack ->
             val encodedPath = backStack.arguments?.getString("encodedPath") ?: ""
+            val encodedOrigUri = backStack.arguments?.getString("origUri") ?: ""
             val filePath = try {
                 java.net.URLDecoder.decode(encodedPath, "UTF-8")
             } catch (_: Exception) { encodedPath }
+            val originalUri = try {
+                java.net.URLDecoder.decode(encodedOrigUri, "UTF-8")
+            } catch (_: Exception) { "" }
 
             TrimScreen(
                 filePath = filePath,
+                originalUri = originalUri,
                 onBack = { navController.popBackStack() },
                 onNavigateHome = {
                     navController.navigate(Screen.Home.route) {

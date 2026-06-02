@@ -24,7 +24,7 @@ import com.yusufkilinc.mediatrimmer.R
 @Composable
 fun HomeScreen(
     incomingUri: Uri? = null,
-    onFileReady: (String) -> Unit,
+    onFileReady: (String, String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,7 +35,7 @@ fun HomeScreen(
     ) { uri ->
         uri?.let {
             val path = viewModel.resolveFileUri(it)
-            if (path.isNotEmpty()) onFileReady(path)
+            if (path.isNotEmpty()) onFileReady(path, it.toString())
         }
     }
 
@@ -43,14 +43,14 @@ fun HomeScreen(
     LaunchedEffect(incomingUri) {
         incomingUri?.let {
             val path = viewModel.resolveFileUri(it)
-            if (path.isNotEmpty()) onFileReady(path)
+            if (path.isNotEmpty()) onFileReady(path, it.toString())
         }
     }
 
     // Navigate to TrimScreen when download finishes
     LaunchedEffect(state.downloadedFilePath) {
         state.downloadedFilePath?.let { path ->
-            onFileReady(path)
+            onFileReady(path, "")
             viewModel.clearDownloadedPath()
         }
     }
