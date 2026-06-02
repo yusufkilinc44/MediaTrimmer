@@ -101,11 +101,18 @@ class TrimViewModel @Inject constructor(
         _uiState.update { it.copy(outputFormat = fmt) }
     }
 
+    private fun resolveTransformerFormat(format: MediaFormat, isVideo: Boolean): MediaFormat {
+        val supported = setOf(MediaFormat.MP4, MediaFormat.WEBM, MediaFormat.M4A)
+        if (format in supported) return format
+        return if (isVideo) MediaFormat.MP4 else MediaFormat.M4A
+    }
+
     fun startProcessing() {
         val state = _uiState.value
         val mediaFile = state.mediaFile ?: return
 
-        val actualExtension = state.outputFormat.extension
+        val effectiveFormat = resolveTransformerFormat(state.outputFormat, mediaFile.isVideo && state.operation != OperationType.EXTRACT_AUDIO)
+        val actualExtension = effectiveFormat.extension
 
         val outputPath = FileUtils.generateOutputPath(
             context = context,
@@ -124,7 +131,7 @@ class TrimViewModel @Inject constructor(
             sourceDurationMs = mediaFile.durationMs,
             startMs          = state.startMs,
             endMs            = state.endMs,
-            outputFormat     = state.outputFormat.name,
+            outputFormat     = effectiveFormat.name,
             outputPath       = outputPath,
             operation        = state.operation
         )
@@ -165,7 +172,7 @@ class TrimViewModel @Inject constructor(
                         operationType = state.operation.name,
                         sourceFileName = mediaFile.displayName,
                         outputFilePath = finalOutputPath,
-                        outputFormat = state.outputFormat.displayName,
+                        outputFormat = effectiveFormat.displayName,
                         startMs = state.startMs,
                         endMs = state.endMs,
                         processingDurationMs = elapsed,

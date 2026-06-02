@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -100,7 +101,6 @@ fun TrimRangeSlider(
         } else {
             updateStartFields(sliderStart.toLong())
         }
-        focusManager.clearFocus()
     }
 
     fun commitEndFields() {
@@ -111,7 +111,6 @@ fun TrimRangeSlider(
         } else {
             updateEndFields(sliderEnd.toLong())
         }
-        focusManager.clearFocus()
     }
 
     val labelHour = stringResource(R.string.time_hour)
@@ -120,7 +119,6 @@ fun TrimRangeSlider(
     val labelMs = stringResource(R.string.time_ms)
 
     Column(modifier = modifier) {
-        // ── Start time ──
         Text(
             stringResource(R.string.trim_start),
             style = MaterialTheme.typography.labelMedium,
@@ -133,7 +131,8 @@ fun TrimRangeSlider(
             onSS = { startSS = it }, onCS = { startCS = it },
             labelHour = labelHour, labelMin = labelMin,
             labelSec = labelSec, labelMs = labelMs,
-            onDone = { commitStartFields() }
+            onDone = { commitStartFields(); focusManager.clearFocus() },
+            onFocusLost = { commitStartFields() }
         )
 
         Spacer(Modifier.height(8.dp))
@@ -148,7 +147,6 @@ fun TrimRangeSlider(
 
         Spacer(Modifier.height(8.dp))
 
-        // ── End time ──
         Text(
             stringResource(R.string.trim_end),
             style = MaterialTheme.typography.labelMedium,
@@ -161,12 +159,12 @@ fun TrimRangeSlider(
             onSS = { endSS = it }, onCS = { endCS = it },
             labelHour = labelHour, labelMin = labelMin,
             labelSec = labelSec, labelMs = labelMs,
-            onDone = { commitEndFields() }
+            onDone = { commitEndFields(); focusManager.clearFocus() },
+            onFocusLost = { commitEndFields() }
         )
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Range slider ──
         RangeSlider(
             value = sliderStart..sliderEnd,
             onValueChange = { range ->
@@ -216,7 +214,8 @@ private fun TimeFieldRow(
     onSS: (String) -> Unit, onCS: (String) -> Unit,
     labelHour: String, labelMin: String,
     labelSec: String, labelMs: String,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    onFocusLost: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -224,19 +223,19 @@ private fun TimeFieldRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TimeField(value = hh, onValueChange = onHH, label = labelHour,
-            modifier = Modifier.weight(1f), onDone = onDone)
+            modifier = Modifier.weight(1f), onDone = onDone, onFocusLost = onFocusLost)
         Text(":", style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         TimeField(value = mm, onValueChange = onMM, label = labelMin,
-            modifier = Modifier.weight(1f), onDone = onDone)
+            modifier = Modifier.weight(1f), onDone = onDone, onFocusLost = onFocusLost)
         Text(":", style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         TimeField(value = ss, onValueChange = onSS, label = labelSec,
-            modifier = Modifier.weight(1f), onDone = onDone)
+            modifier = Modifier.weight(1f), onDone = onDone, onFocusLost = onFocusLost)
         Text(".", style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         TimeField(value = cs, onValueChange = onCS, label = labelMs,
-            modifier = Modifier.weight(1f), onDone = onDone)
+            modifier = Modifier.weight(1f), onDone = onDone, onFocusLost = onFocusLost)
     }
 }
 
@@ -246,8 +245,11 @@ private fun TimeField(
     onValueChange: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    onFocusLost: () -> Unit
 ) {
+    var hadFocus by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = value,
         onValueChange = { newVal ->
@@ -255,7 +257,12 @@ private fun TimeField(
             onValueChange(filtered)
         },
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { state ->
+            if (hadFocus && !state.isFocused) {
+                onFocusLost()
+            }
+            hadFocus = state.isFocused
+        },
         textStyle = MaterialTheme.typography.titleMedium.copy(
             fontFamily = FontFamily.Monospace,
             textAlign = TextAlign.Center
