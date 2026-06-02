@@ -27,110 +27,187 @@ fun TrimRangeSlider(
     onRangeChange: (start: Long, end: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var sliderStart by remember(startMs) { mutableFloatStateOf(startMs.toFloat()) }
-    var sliderEnd   by remember(endMs)   { mutableFloatStateOf(endMs.toFloat()) }
+    var sliderStart by remember { mutableFloatStateOf(startMs.toFloat()) }
+    var sliderEnd by remember { mutableFloatStateOf(endMs.toFloat()) }
+    var isDragging by remember { mutableStateOf(false) }
 
     val minGapMs = 500L
-
-    // Manual input state
-    var startText by remember(startMs) { mutableStateOf(formatForInput(startMs)) }
-    var endText   by remember(endMs)   { mutableStateOf(formatForInput(endMs)) }
     val focusManager = LocalFocusManager.current
 
+    // Sync from external state only when not dragging
+    LaunchedEffect(startMs, endMs) {
+        if (!isDragging) {
+            sliderStart = startMs.toFloat()
+            sliderEnd = endMs.toFloat()
+        }
+    }
+
+    // Start time fields
+    var startHH by remember { mutableStateOf("") }
+    var startMM by remember { mutableStateOf("") }
+    var startSS by remember { mutableStateOf("") }
+    var startCS by remember { mutableStateOf("") }
+
+    // End time fields
+    var endHH by remember { mutableStateOf("") }
+    var endMM by remember { mutableStateOf("") }
+    var endSS by remember { mutableStateOf("") }
+    var endCS by remember { mutableStateOf("") }
+
+    fun updateStartFields(ms: Long) {
+        val h = TimeUnit.MILLISECONDS.toHours(ms)
+        val m = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
+        val s = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
+        val c = (ms % 1000) / 10
+        startHH = String.format(Locale.US, "%02d", h)
+        startMM = String.format(Locale.US, "%02d", m)
+        startSS = String.format(Locale.US, "%02d", s)
+        startCS = String.format(Locale.US, "%02d", c)
+    }
+
+    fun updateEndFields(ms: Long) {
+        val h = TimeUnit.MILLISECONDS.toHours(ms)
+        val m = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
+        val s = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
+        val c = (ms % 1000) / 10
+        endHH = String.format(Locale.US, "%02d", h)
+        endMM = String.format(Locale.US, "%02d", m)
+        endSS = String.format(Locale.US, "%02d", s)
+        endCS = String.format(Locale.US, "%02d", c)
+    }
+
+    // Initialize fields
+    LaunchedEffect(Unit) {
+        updateStartFields(startMs)
+        updateEndFields(endMs)
+    }
+
+    // Update fields when slider values change (from drag or external)
+    LaunchedEffect(sliderStart) {
+        updateStartFields(sliderStart.toLong())
+    }
+    LaunchedEffect(sliderEnd) {
+        updateEndFields(sliderEnd.toLong())
+    }
+
+    fun parseFieldsToMs(hh: String, mm: String, ss: String, cs: String): Long? {
+        val h = hh.toLongOrNull() ?: return null
+        val m = mm.toLongOrNull() ?: return null
+        val s = ss.toLongOrNull() ?: return null
+        val c = cs.toLongOrNull() ?: return null
+        if (h < 0 || m < 0 || m > 59 || s < 0 || s > 59 || c < 0 || c > 99) return null
+        return h * 3_600_000 + m * 60_000 + s * 1_000 + c * 10
+    }
+
+    fun commitStartFields() {
+        val parsed = parseFieldsToMs(startHH, startMM, startSS, startCS)
+        if (parsed != null && parsed < sliderEnd.toLong() - minGapMs && parsed >= 0) {
+            sliderStart = parsed.toFloat()
+            onRangeChange(parsed, sliderEnd.toLong())
+        } else {
+            updateStartFields(sliderStart.toLong())
+        }
+        focusManager.clearFocus()
+    }
+
+    fun commitEndFields() {
+        val parsed = parseFieldsToMs(endHH, endMM, endSS, endCS)
+        if (parsed != null && parsed > sliderStart.toLong() + minGapMs && parsed <= durationMs) {
+            sliderEnd = parsed.toFloat()
+            onRangeChange(sliderStart.toLong(), parsed)
+        } else {
+            updateEndFields(sliderEnd.toLong())
+        }
+        focusManager.clearFocus()
+    }
+
     Column(modifier = modifier) {
-        // Manual time input fields
+        // Start time label + fields
+        Text(
+            "Start",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = startText,
-                onValueChange = { startText = it },
-                label = { Text("Start", style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Center
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(onDone = {
-                    val parsed = parseTimecode(startText)
-                    if (parsed != null && parsed < sliderEnd.toLong() - minGapMs && parsed >= 0) {
-                        sliderStart = parsed.toFloat()
-                        onRangeChange(parsed, sliderEnd.toLong())
-                    } else {
-                        startText = formatForInput(sliderStart.toLong())
-                    }
-                    focusManager.clearFocus()
-                }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
-            )
-
-            Text(
-                text = "→  ${TimeUtils.formatDuration(sliderEnd.toLong() - sliderStart.toLong())}  →",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            OutlinedTextField(
-                value = endText,
-                onValueChange = { endText = it },
-                label = { Text("End", style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Center
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(onDone = {
-                    val parsed = parseTimecode(endText)
-                    if (parsed != null && parsed > sliderStart.toLong() + minGapMs && parsed <= durationMs) {
-                        sliderEnd = parsed.toFloat()
-                        onRangeChange(sliderStart.toLong(), parsed)
-                    } else {
-                        endText = formatForInput(sliderEnd.toLong())
-                    }
-                    focusManager.clearFocus()
-                }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
-            )
+            TimeField(value = startHH, onValueChange = { startHH = it }, label = "HH", modifier = Modifier.weight(1f),
+                onDone = { commitStartFields() })
+            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = startMM, onValueChange = { startMM = it }, label = "MM", modifier = Modifier.weight(1f),
+                onDone = { commitStartFields() })
+            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = startSS, onValueChange = { startSS = it }, label = "SS", modifier = Modifier.weight(1f),
+                onDone = { commitStartFields() })
+            Text(".", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = startCS, onValueChange = { startCS = it }, label = "ms", modifier = Modifier.weight(1f),
+                onDone = { commitStartFields() })
         }
 
         Spacer(Modifier.height(8.dp))
 
+        // Duration display
+        Text(
+            text = "→  ${TimeUtils.formatDuration(sliderEnd.toLong() - sliderStart.toLong())}  →",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // End time label + fields
+        Text(
+            "End",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TimeField(value = endHH, onValueChange = { endHH = it }, label = "HH", modifier = Modifier.weight(1f),
+                onDone = { commitEndFields() })
+            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = endMM, onValueChange = { endMM = it }, label = "MM", modifier = Modifier.weight(1f),
+                onDone = { commitEndFields() })
+            Text(":", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = endSS, onValueChange = { endSS = it }, label = "SS", modifier = Modifier.weight(1f),
+                onDone = { commitEndFields() })
+            Text(".", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TimeField(value = endCS, onValueChange = { endCS = it }, label = "ms", modifier = Modifier.weight(1f),
+                onDone = { commitEndFields() })
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Range slider
         RangeSlider(
             value = sliderStart..sliderEnd,
             onValueChange = { range ->
                 val newStart = range.start.toLong()
-                val newEnd   = range.endInclusive.toLong()
+                val newEnd = range.endInclusive.toLong()
                 if (newEnd - newStart >= minGapMs) {
+                    isDragging = true
                     sliderStart = range.start
-                    sliderEnd   = range.endInclusive
-                    startText = formatForInput(newStart)
-                    endText = formatForInput(newEnd)
-                    onRangeChange(newStart, newEnd)
+                    sliderEnd = range.endInclusive
                 }
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                onRangeChange(sliderStart.toLong(), sliderEnd.toLong())
             },
             valueRange = 0f..durationMs.toFloat(),
             colors = SliderDefaults.colors(
-                thumbColor            = MaterialTheme.colorScheme.tertiary,
-                activeTrackColor      = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f),
-                inactiveTrackColor    = MaterialTheme.colorScheme.outlineVariant
+                thumbColor = MaterialTheme.colorScheme.tertiary,
+                activeTrackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f),
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -141,7 +218,7 @@ fun TrimRangeSlider(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "0:00",
+                text = "00:00:00",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
@@ -154,65 +231,35 @@ fun TrimRangeSlider(
     }
 }
 
-/**
- * Formats milliseconds as MM:SS.m or HH:MM:SS.m for the input field.
- */
-private fun formatForInput(ms: Long): String {
-    val hours = TimeUnit.MILLISECONDS.toHours(ms)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
-    val tenths = (ms % 1000) / 100
-
-    return if (hours > 0) {
-        String.format(Locale.US, "%d:%02d:%02d.%d", hours, minutes, seconds, tenths)
-    } else {
-        String.format(Locale.US, "%d:%02d.%d", minutes, seconds, tenths)
-    }
-}
-
-/**
- * Parses a timecode string (MM:SS, MM:SS.m, HH:MM:SS, HH:MM:SS.m) to milliseconds.
- * Returns null if parsing fails.
- */
-private fun parseTimecode(input: String): Long? {
-    val trimmed = input.trim()
-    if (trimmed.isEmpty()) return null
-
-    return try {
-        val parts = trimmed.split(":")
-        var ms = 0L
-
-        when (parts.size) {
-            1 -> {
-                // Just seconds (possibly with decimal)
-                ms = parseSecondsToMs(parts[0])
-            }
-            2 -> {
-                // MM:SS or MM:SS.m
-                val minutes = parts[0].toLong()
-                ms = minutes * 60_000 + parseSecondsToMs(parts[1])
-            }
-            3 -> {
-                // HH:MM:SS or HH:MM:SS.m
-                val hours = parts[0].toLong()
-                val minutes = parts[1].toLong()
-                ms = hours * 3_600_000 + minutes * 60_000 + parseSecondsToMs(parts[2])
-            }
-            else -> return null
-        }
-
-        if (ms < 0) null else ms
-    } catch (_: Exception) {
-        null
-    }
-}
-
-private fun parseSecondsToMs(secStr: String): Long {
-    val dotParts = secStr.split(".")
-    val secs = dotParts[0].toLong()
-    val fracMs = if (dotParts.size > 1) {
-        val frac = dotParts[1].take(3).padEnd(3, '0')
-        frac.toLong()
-    } else 0L
-    return secs * 1000 + fracMs
+@Composable
+private fun TimeField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    onDone: () -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { newVal ->
+            val filtered = newVal.filter { it.isDigit() }.take(2)
+            onValueChange(filtered)
+        },
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.titleMedium.copy(
+            fontFamily = FontFamily.Monospace,
+            textAlign = TextAlign.Center
+        ),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
+    )
 }

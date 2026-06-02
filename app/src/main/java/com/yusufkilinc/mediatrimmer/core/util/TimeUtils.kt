@@ -9,13 +9,9 @@ object TimeUtils {
         val hours = TimeUnit.MILLISECONDS.toHours(ms)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
         val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
-        val millis = ms % 1000
+        val centis = (ms % 1000) / 10
 
-        return if (hours > 0) {
-            String.format(Locale.US, "%02d:%02d:%02d.%03d", hours, minutes, seconds, millis)
-        } else {
-            String.format(Locale.US, "%02d:%02d.%03d", minutes, seconds, millis)
-        }
+        return String.format(Locale.US, "%02d:%02d:%02d.%02d", hours, minutes, seconds, centis)
     }
 
     fun formatTimecodeSec(ms: Long): String {
@@ -23,11 +19,7 @@ object TimeUtils {
         val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
         val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
 
-        return if (hours > 0) {
-            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format(Locale.US, "%02d:%02d", minutes, seconds)
-        }
+        return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     fun formatDuration(ms: Long): String {

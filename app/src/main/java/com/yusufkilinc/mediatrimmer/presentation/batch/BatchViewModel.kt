@@ -21,7 +21,8 @@ data class BatchItem(
     val id: String = java.util.UUID.randomUUID().toString(),
     val filePath: String,
     val fileName: String,
-    val durationMs: Long = 0L
+    val durationMs: Long = 0L,
+    val isVideo: Boolean = false
 )
 
 data class BatchUiState(
@@ -51,7 +52,9 @@ class BatchViewModel @Inject constructor(
                 val path = try { FileUtils.resolveUriToPath(context, uri) } catch (_: Exception) { null }
                     ?: return@mapNotNull null
                 val dur = mediaRepository.probeMediaDurationMs(path)
-                BatchItem(filePath = path, fileName = File(path).name, durationMs = dur)
+                val ext = path.substringAfterLast('.', "").lowercase()
+                val isVid = ext in setOf("mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "3gp", "ts", "m4v")
+                BatchItem(filePath = path, fileName = File(path).name, durationMs = dur, isVideo = isVid)
             }
             _uiState.update { it.copy(items = it.items + items) }
         }
@@ -60,7 +63,9 @@ class BatchViewModel @Inject constructor(
     fun addFilePath(path: String) {
         viewModelScope.launch {
             val dur = mediaRepository.probeMediaDurationMs(path)
-            val item = BatchItem(filePath = path, fileName = File(path).name, durationMs = dur)
+            val ext = path.substringAfterLast('.', "").lowercase()
+            val isVid = ext in setOf("mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "3gp", "ts", "m4v")
+            val item = BatchItem(filePath = path, fileName = File(path).name, durationMs = dur, isVideo = isVid)
             _uiState.update { it.copy(items = it.items + item) }
         }
     }

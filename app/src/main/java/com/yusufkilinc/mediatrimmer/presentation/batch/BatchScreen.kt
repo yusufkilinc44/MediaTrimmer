@@ -96,9 +96,15 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
                         }
                 }
 
-                // Format selector
-                val formats = when (state.operation) {
-                    OperationType.EXTRACT_AUDIO -> MediaFormat.audioFormats
+                // Format selector — based on source file type
+                val hasVideo = state.items.any { it.isVideo }
+                val hasAudio = state.items.any { !it.isVideo }
+                val sourceIsVideo = hasVideo && !hasAudio
+                val sourceIsAudio = hasAudio && !hasVideo
+                val formats = when {
+                    state.operation == OperationType.EXTRACT_AUDIO -> MediaFormat.audioFormats
+                    sourceIsAudio -> MediaFormat.audioFormats
+                    sourceIsVideo -> MediaFormat.videoFormats
                     else -> MediaFormat.videoFormats + MediaFormat.audioFormats
                 }
                 FormatSelector(

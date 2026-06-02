@@ -5,10 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,26 +37,28 @@ fun VideoPreview(
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     var currentPositionMs by remember { mutableLongStateOf(startMs) }
+    var isSeeking by remember { mutableStateOf(false) }
 
     val player = remember {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse(filePath)))
+            val uri = if (filePath.startsWith("/")) Uri.fromFile(java.io.File(filePath)) else Uri.parse(filePath)
+            setMediaItem(MediaItem.fromUri(uri))
             prepare()
             seekTo(startMs)
         }
     }
 
-    // Track playback position
     LaunchedEffect(player) {
         while (true) {
-            val pos = player.currentPosition
-            currentPositionMs = pos
-            onPositionChanged(pos)
-            // Stop at end marker
-            if (pos >= endMs && player.isPlaying) {
-                player.pause()
-                player.seekTo(startMs)
-                isPlaying = false
+            if (!isSeeking) {
+                val pos = player.currentPosition
+                currentPositionMs = pos
+                onPositionChanged(pos)
+                if (pos >= endMs && player.isPlaying) {
+                    player.pause()
+                    player.seekTo(startMs)
+                    isPlaying = false
+                }
             }
             kotlinx.coroutines.delay(100L)
         }
@@ -84,7 +85,6 @@ fun VideoPreview(
                     .background(Color.Black)
             )
         } else {
-            // Audio waveform placeholder
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -93,34 +93,59 @@ fun VideoPreview(
                 color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = TimeUtils.formatTimecode(currentPositionMs),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.MusicNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = TimeUtils.formatTimecode(currentPositionMs),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
 
-        // Playback controls
+        // Seekbar slider
+        val totalDuration = (endMs - startMs).coerceAtLeast(1L)
+        Slider(
+            value = currentPositionMs.toFloat().coerceIn(startMs.toFloat(), endMs.toFloat()),
+            onValueChange = { value ->
+                isSeeking = true
+                currentPositionMs = value.toLong()
+                onPositionChanged(value.toLong())
+            },
+            onValueChangeFinished = {
+                player.seekTo(currentPositionMs)
+                isSeeking = false
+            },
+            valueRange = startMs.toFloat()..endMs.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+        )
+
+        // Play/Pause + time display
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.Center,
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Skip to start
-            IconButton(onClick = {
-                player.seekTo(startMs)
-                currentPositionMs = startMs
-            }) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "Start",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            // Play / Pause
             FilledIconButton(
                 onClick = {
                     if (isPlaying) {
@@ -130,7 +155,8 @@ fun VideoPreview(
                         player.play()
                     }
                     isPlaying = !isPlaying
-                }
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -138,25 +164,15 @@ fun VideoPreview(
                 )
             }
 
-            // Skip to end
-            IconButton(onClick = {
-                player.seekTo(endMs)
-                currentPositionMs = endMs
-            }) {
-                Icon(Icons.Default.SkipNext, contentDescription = "End",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+            Spacer(Modifier.width(12.dp))
 
-        // Time display - separate centered row
-        Text(
-            text = "${TimeUtils.formatTimecode(currentPositionMs)} / ${TimeUtils.formatTimecode(endMs - startMs)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            textAlign = TextAlign.Center
-        )
+            Text(
+                text = "${TimeUtils.formatTimecode(currentPositionMs)} / ${TimeUtils.formatTimecode(endMs - startMs)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }

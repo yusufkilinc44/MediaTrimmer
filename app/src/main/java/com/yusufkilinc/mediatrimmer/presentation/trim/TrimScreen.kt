@@ -171,23 +171,23 @@ fun TrimScreen(
             }
 
             // ── Operation + Format selector (ABOVE range slider) ────────
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+            OutlinedCard(
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, MaterialTheme.colorScheme.outlineVariant
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Tune, null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             stringResource(R.string.trim_operation),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -230,23 +230,23 @@ fun TrimScreen(
 
             // ── Trim range slider (only for TRIM operation) ─────────────
             if (state.operation == OperationType.TRIM) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                OutlinedCard(
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, MaterialTheme.colorScheme.outlineVariant
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.ContentCut, null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                tint = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 stringResource(R.string.trim_select_range),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Spacer(Modifier.height(12.dp))

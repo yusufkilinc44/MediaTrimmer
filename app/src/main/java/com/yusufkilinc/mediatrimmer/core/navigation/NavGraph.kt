@@ -1,6 +1,5 @@
 package com.yusufkilinc.mediatrimmer.core.navigation
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -42,7 +41,7 @@ fun MediaTrimmerNavGraph(
         ) { backStack ->
             val encodedPath = backStack.arguments?.getString("encodedPath") ?: ""
             val filePath = try {
-                Uri.decode(encodedPath)
+                java.net.URLDecoder.decode(encodedPath, "UTF-8")
             } catch (_: Exception) { encodedPath }
 
             TrimScreen(
