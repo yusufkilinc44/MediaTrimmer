@@ -1,6 +1,5 @@
 package com.yusufkilinc.mediatrimmer.presentation.history
 
-import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,7 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,7 +22,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yusufkilinc.mediatrimmer.R
 import com.yusufkilinc.mediatrimmer.core.util.FileUtils
-import com.yusufkilinc.mediatrimmer.core.util.ShareUtils
 import com.yusufkilinc.mediatrimmer.core.util.TimeUtils
 import com.yusufkilinc.mediatrimmer.data.local.db.entity.ProcessingHistoryEntity
 import java.io.File
@@ -39,7 +37,6 @@ private val HistoryCardColorDark = Color(0xFF3E3A2E)
 fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
     val history by viewModel.history.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -55,7 +52,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color(0xFFB2DFDB)
                 )
             )
         }
@@ -69,17 +66,12 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.History, null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
+                    Icon(Icons.Default.History, null, modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     Spacer(Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.history_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                    Text(stringResource(R.string.history_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                 }
             }
         }
@@ -92,15 +84,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
             items(items = history, key = { it.id }) { entry ->
                 HistoryItem(
                     entry = entry,
-                    onDelete = { viewModel.deleteEntry(entry.id) },
-                    onShare = {
-                        if (File(entry.outputFilePath).exists()) {
-                            context.startActivity(
-                                ShareUtils.createShareIntent(context, entry.outputFilePath)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                        }
-                    }
+                    onDelete = { viewModel.deleteEntry(entry.id) }
                 )
             }
         }
@@ -112,12 +96,8 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.history_clear_all)) },
             text = { Text(stringResource(R.string.history_clear_confirm)) },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.clearAll()
-                    showClearDialog = false
-                }) {
-                    Text(stringResource(R.string.btn_confirm),
-                        color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { viewModel.clearAll(); showClearDialog = false }) {
+                    Text(stringResource(R.string.btn_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -132,14 +112,9 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
 @Composable
 private fun HistoryItem(
     entry: ProcessingHistoryEntity,
-    onDelete: () -> Unit,
-    onShare: () -> Unit
+    onDelete: () -> Unit
 ) {
-    val fileExists = remember(entry.outputFilePath) {
-        !entry.outputFilePath.startsWith("content://") && File(entry.outputFilePath).exists()
-    }
     val isSuccess = entry.status == "COMPLETED"
-
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val cardColor = if (isSuccess) {
         if (isDark) HistoryCardColorDark else HistoryCardColor
@@ -153,179 +128,95 @@ private fun HistoryItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ── Header: status icon + operation chip + date ──
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // ── Header ──
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Icon(
-                    imageVector = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
-                    contentDescription = null,
-                    tint = if (isSuccess) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(18.dp)
+                    if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error, null,
+                    tint = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(Modifier.width(6.dp))
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.height(22.dp)
-                ) {
+                Spacer(Modifier.width(8.dp))
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        text = entry.operationType.replace("_", " "),
-                        style = MaterialTheme.typography.labelSmall,
+                        entry.operationType.replace("_", " "),
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                     )
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale.getDefault())
-                        .format(Date(entry.createdAt)),
-                    style = MaterialTheme.typography.labelSmall,
+                    SimpleDateFormat("dd MMM yyyy  HH:mm", Locale.getDefault()).format(Date(entry.createdAt)),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
 
             Spacer(Modifier.height(12.dp))
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                thickness = 0.5.dp
-            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
             Spacer(Modifier.height(12.dp))
 
-            // ── Source file ──
-            InfoRow(
-                icon = Icons.Default.FileOpen,
-                iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                label = stringResource(R.string.history_source),
-                value = entry.sourceFileName
-            )
-
+            // ── Source ──
+            SectionLabel(stringResource(R.string.result_input), Icons.Default.FileOpen, MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(4.dp))
+            Text(entry.sourceFileName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (entry.sourceFolder.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
-                Row(modifier = Modifier.padding(start = 24.dp)) {
-                    DetailChip(Icons.Default.Folder, entry.sourceFolder)
-                }
+                DetailRow(Icons.Default.Folder, entry.sourceFolder)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(top = 2.dp)) {
+                if (entry.sourceFileSizeBytes > 0) DetailRow(Icons.Default.Storage, FileUtils.formatFileSize(entry.sourceFileSizeBytes))
+                if (entry.sourceDurationMs > 0) DetailRow(Icons.Default.Timer, TimeUtils.formatDuration(entry.sourceDurationMs))
             }
 
-            if (entry.sourceFileSizeBytes > 0 || entry.sourceDurationMs > 0) {
-                Spacer(Modifier.height(2.dp))
-                Row(modifier = Modifier.padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (entry.sourceFileSizeBytes > 0) {
-                        DetailChip(Icons.Default.Storage, FileUtils.formatFileSize(entry.sourceFileSizeBytes))
-                    }
-                    if (entry.sourceDurationMs > 0) {
-                        DetailChip(Icons.Default.Timer, TimeUtils.formatDuration(entry.sourceDurationMs))
-                    }
-                }
-            }
+            Spacer(Modifier.height(14.dp))
 
-            Spacer(Modifier.height(10.dp))
-
-            // ── Output file ──
-            InfoRow(
-                icon = Icons.Default.SaveAlt,
-                iconTint = MaterialTheme.colorScheme.primary,
-                label = stringResource(R.string.result_output),
-                value = entry.outputFileName.ifEmpty { FileUtils.getFileName(entry.outputFilePath) }
+            // ── Output ──
+            SectionLabel(stringResource(R.string.result_output), Icons.Default.SaveAlt, MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                entry.outputFileName.ifEmpty { FileUtils.getFileName(entry.outputFilePath) },
+                style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
-
             if (entry.outputFolder.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
-                Row(modifier = Modifier.padding(start = 24.dp)) {
-                    DetailChip(Icons.Default.Folder, entry.outputFolder)
-                }
+                DetailRow(Icons.Default.Folder, entry.outputFolder)
             }
-
-            Spacer(Modifier.height(2.dp))
-            Row(modifier = Modifier.padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DetailChip(Icons.Default.AudioFile, entry.outputFormat)
-                if (entry.outputFileSizeBytes > 0) {
-                    DetailChip(Icons.Default.Storage, FileUtils.formatFileSize(entry.outputFileSizeBytes))
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(top = 2.dp)) {
+                if (entry.outputFileSizeBytes > 0) DetailRow(Icons.Default.Storage, FileUtils.formatFileSize(entry.outputFileSizeBytes))
             }
-
             if (entry.startMs > 0 || entry.endMs > 0) {
-                Spacer(Modifier.height(2.dp))
-                Row(modifier = Modifier.padding(start = 24.dp)) {
-                    DetailChip(
-                        Icons.Default.ContentCut,
-                        "${TimeUtils.formatTimecodeSec(entry.startMs)} → ${TimeUtils.formatTimecodeSec(entry.endMs)}"
-                    )
-                }
+                DetailRow(Icons.Default.ContentCut, "${TimeUtils.formatTimecodeSec(entry.startMs)} → ${TimeUtils.formatTimecodeSec(entry.endMs)}")
             }
 
             // ── Processing time ──
             if (entry.processingDurationMs > 0) {
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.padding(start = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Speed, null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "${stringResource(R.string.history_processed_in)} ${String.format("%.1f s", entry.processingDurationMs / 1000.0)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
+                Spacer(Modifier.height(8.dp))
+                DetailRow(Icons.Default.Speed, "${stringResource(R.string.history_processed_in)} ${String.format("%.1f s", entry.processingDurationMs / 1000.0)}", MaterialTheme.colorScheme.tertiary)
             }
 
             // ── Warnings ──
+            val fileExists = remember(entry.outputFilePath) {
+                !entry.outputFilePath.startsWith("content://") && File(entry.outputFilePath).exists()
+            }
             if (!fileExists && isSuccess && !entry.outputFilePath.startsWith("content://")) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.history_file_missing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(start = 24.dp)
-                )
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.history_file_missing), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             if (!isSuccess && entry.errorMessage != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    entry.errorMessage,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 24.dp)
-                )
+                Spacer(Modifier.height(4.dp))
+                Text(entry.errorMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
 
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                thickness = 0.5.dp
-            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
             Spacer(Modifier.height(4.dp))
 
-            // ── Action buttons ──
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isSuccess && fileExists) {
-                    TextButton(onClick = onShare, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                        Icon(Icons.Default.Share, null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.history_share), style = MaterialTheme.typography.labelMedium)
-                    }
-                }
+            // ── Delete only ──
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDelete, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(15.dp),
-                        tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.history_delete),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.history_delete), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -333,55 +224,23 @@ private fun HistoryItem(
 }
 
 @Composable
-private fun InfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: Color,
-    label: String,
-    value: String
-) {
+private fun SectionLabel(text: String, icon: ImageVector, tint: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = iconTint, modifier = Modifier.size(16.dp))
+        Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
-        Text(
-            text = "$label: ",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
+        Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = tint)
     }
 }
 
 @Composable
-private fun DetailChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            icon, null,
-            modifier = Modifier.size(12.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        Spacer(Modifier.width(3.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
+private fun DetailRow(icon: ImageVector, text: String, tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+        Icon(icon, null, modifier = Modifier.size(14.dp), tint = tint)
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = tint)
     }
 }
 
 private fun Color.luminance(): Float {
-    val r = red * 0.2126f
-    val g = green * 0.7152f
-    val b = blue * 0.0722f
-    return r + g + b
+    return red * 0.2126f + green * 0.7152f + blue * 0.0722f
 }

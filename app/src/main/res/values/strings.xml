@@ -119,7 +119,7 @@
     <!-- Result Screen -->
     <string name="trim_select_range">Select Range</string>
     <string name="result_processing_time">Processing Time</string>
-    <string name="result_input">Input</string>
+    <string name="result_input">Source</string>
     <string name="result_output">Output</string>
 
     <!-- Settings extras -->

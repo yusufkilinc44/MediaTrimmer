@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.Color
 import com.yusufkilinc.mediatrimmer.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,7 +83,7 @@ fun HomeScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color(0xFFB2DFDB)
                 )
             )
         }

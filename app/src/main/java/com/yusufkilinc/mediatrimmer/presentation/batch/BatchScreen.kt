@@ -35,7 +35,7 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
             TopAppBar(
                 title = { Text(stringResource(R.string.batch_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFB2DFDB)
                 )
             )
         },
@@ -77,10 +77,21 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Operation selector (no TRIM in batch mode)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val ops = listOf(OperationType.EXTRACT_AUDIO, OperationType.CONVERT)
-                    ops.forEachIndexed { index, op ->
+                // Operation selector
+                val hasVideo = state.items.any { it.isVideo }
+                val hasAudio = state.items.any { !it.isVideo }
+                val sourceIsAllAudio = hasAudio && !hasVideo
+                val sourceIsAllVideo = hasVideo && !hasAudio
+
+                val ops = if (sourceIsAllAudio) {
+                    listOf(OperationType.CONVERT)
+                } else {
+                    listOf(OperationType.EXTRACT_AUDIO, OperationType.CONVERT)
+                }
+
+                if (ops.size > 1) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        ops.forEachIndexed { index, op ->
                             SegmentedButton(
                                 selected = state.operation == op,
                                 onClick = { viewModel.setOperation(op) },
@@ -94,14 +105,19 @@ fun BatchScreen(viewModel: BatchViewModel = hiltViewModel()) {
                                 }
                             )
                         }
+                    }
                 }
 
-                // Format selector — based on source file type
-                val hasVideo = state.items.any { it.isVideo }
-                val hasAudio = state.items.any { !it.isVideo }
-                val sourceIsVideo = hasVideo && !hasAudio
-                val formats = com.yusufkilinc.mediatrimmer.domain.usecase.FFmpegCommandBuilder
-                    .availableOutputFormats(sourceIsVideo, state.operation)
+                // Format selector — video source → video formats, audio → audio formats
+                val formats = if (state.operation == OperationType.EXTRACT_AUDIO) {
+                    MediaFormat.audioFormats
+                } else if (sourceIsAllVideo) {
+                    MediaFormat.videoFormats
+                } else if (sourceIsAllAudio) {
+                    MediaFormat.audioFormats
+                } else {
+                    MediaFormat.videoFormats + MediaFormat.audioFormats
+                }
                 FormatSelector(
                     label = stringResource(R.string.batch_output_format),
                     formats = formats,

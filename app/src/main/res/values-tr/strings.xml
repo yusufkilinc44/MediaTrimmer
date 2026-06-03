@@ -119,7 +119,7 @@
     <!-- Sonuç Ekranı -->
     <string name="trim_select_range">Aralık Seç</string>
     <string name="result_processing_time">İşlem Süresi</string>
-    <string name="result_input">Girdi</string>
+    <string name="result_input">Kaynak</string>
     <string name="result_output">Çıktı</string>
 
     <!-- Ayarlar ek -->

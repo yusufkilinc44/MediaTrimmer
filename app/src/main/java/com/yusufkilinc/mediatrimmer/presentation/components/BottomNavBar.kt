@@ -5,12 +5,16 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.yusufkilinc.mediatrimmer.R
 import com.yusufkilinc.mediatrimmer.core.navigation.Screen
+
+private val TurquoiseNav = Color(0xFF00897B)
+private val TurquoiseNavDark = Color(0xFF004D40)
 
 data class NavItem(
     val screen: Screen,
@@ -32,8 +36,8 @@ fun BottomNavBar(navController: NavController) {
     val currentRoute = backStack?.destination?.route
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        containerColor = TurquoiseNav,
+        contentColor = Color.White
     ) {
         navItems.forEach { item ->
             val selected = currentRoute == item.screen.route
@@ -56,11 +60,11 @@ fun BottomNavBar(navController: NavController) {
                 },
                 label = { Text(stringResource(item.labelRes)) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    indicatorColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                    selectedIconColor = TurquoiseNav,
+                    selectedTextColor = Color.White,
+                    indicatorColor = Color.White,
+                    unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                    unselectedTextColor = Color.White.copy(alpha = 0.7f)
                 )
             )
         }

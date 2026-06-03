@@ -559,29 +559,27 @@ private fun ResultScreen(
             )
         }
 
-        // ── INPUT file info ──────────────────────────────────────
+        // ── Source file info ──────────────────────────────────────
         val sourceFriendlyDir = FileUtils.friendlyDirPath(state.originalSourcePath.ifEmpty { mediaFile.resolvedPath })
         FileInfoCard(
             title = stringResource(R.string.result_input),
             icon = Icons.Default.FileOpen,
-            cardColor = MaterialTheme.colorScheme.surfaceContainer,
-            onCardColor = MaterialTheme.colorScheme.onSurface,
+            cardColor = Color(0xFFE8F5E9),
+            onCardColor = Color(0xFF1B5E20),
             fileName = mediaFile.displayName,
             filePath = sourceFriendlyDir,
-            fileType = mediaFile.format?.displayName ?: "?",
             fileSize = FileUtils.formatFileSize(mediaFile.sizeBytes),
             duration = TimeUtils.formatDuration(mediaFile.durationMs)
         )
 
-        // ── OUTPUT file info ─────────────────────────────────────
+        // ── Output file info ─────────────────────────────────────
         FileInfoCard(
             title = stringResource(R.string.result_output),
             icon = Icons.Default.SaveAlt,
-            cardColor = MaterialTheme.colorScheme.secondaryContainer,
-            onCardColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            cardColor = Color(0xFFE3F2FD),
+            onCardColor = Color(0xFF0D47A1),
             fileName = outputFileName,
             filePath = FileUtils.friendlyDirPath(outputPath),
-            fileType = state.outputFormat.displayName,
             fileSize = FileUtils.formatFileSize(outputFileSize),
             duration = if (state.operation == OperationType.CONVERT) {
                 TimeUtils.formatDuration(mediaFile.durationMs)
@@ -591,23 +589,26 @@ private fun ResultScreen(
         )
 
         // Action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Button(
+            onClick = { onShare(outputPath) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1A237E),
+                contentColor = Color.White
+            )
         ) {
-            FilledTonalButton(
-                onClick = { onShare(outputPath) },
-                modifier = Modifier.weight(1f).height(48.dp)
-            ) {
-                Icon(Icons.Default.Share, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.trim_share))
-            }
+            Icon(Icons.Default.Share, null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.trim_share))
         }
 
-        OutlinedButton(
+        Button(
             onClick = onNavigateHome,
-            modifier = Modifier.fillMaxWidth().height(48.dp)
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF880E4F),
+                contentColor = Color.White
+            )
         ) {
             Icon(Icons.Default.Home, null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
@@ -620,11 +621,10 @@ private fun ResultScreen(
 private fun FileInfoCard(
     title: String,
     icon: ImageVector,
-    cardColor: androidx.compose.ui.graphics.Color,
-    onCardColor: androidx.compose.ui.graphics.Color,
+    cardColor: Color,
+    onCardColor: Color,
     fileName: String,
     filePath: String,
-    fileType: String,
     fileSize: String,
     duration: String
 ) {
@@ -645,7 +645,6 @@ private fun FileInfoCard(
             }
             Spacer(Modifier.height(10.dp))
 
-            // File name - bigger font
             Text(
                 fileName,
                 style = MaterialTheme.typography.bodyLarge,
@@ -656,16 +655,13 @@ private fun FileInfoCard(
             )
             Spacer(Modifier.height(8.dp))
 
-            // Info chips row - bigger font
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                InfoBadge(Icons.Default.AudioFile, fileType, onCardColor)
                 InfoBadge(Icons.Default.Storage, fileSize, onCardColor)
                 InfoBadge(Icons.Default.Timer, duration, onCardColor)
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // Path - friendly format
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     Icons.Default.Folder, null,

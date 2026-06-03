@@ -52,7 +52,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFB2DFDB)
                 )
             )
         }
